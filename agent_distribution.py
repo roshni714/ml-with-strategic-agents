@@ -14,33 +14,84 @@ class AgentDistribution:
     d -- dimension of agent
     n_types -- number of agent types
     types -- optional argument: a dictionary of agent types of the form 
-        {etas: (n_types x D x 1), gammas: (n_types x D x1)}
+        {etas: (n_types, D, 1), gammas: (n_types, D, 1)}
     
     """
+
     def __init__(self, n=1000, d=2, n_types=50, types=None, prop=None):
         self.n = n
         self.d = d
         self.n_types = n_types
         self.types = types
         self.prop = prop
-        if not types:
-            #Generate n_types agent types randomly
-            etas = np.random.uniform(0., 0.3, size=n_types * d).reshape(n_types, d, 1)
-            gammas = np.random.uniform(2., 4., size=n_types *d).reshape(n_types, d, 1)
+        if types is None:
+            # Generate n_types agent types randomly
+            etas = np.random.uniform(0.0, 0.3, size=n_types * d).reshape(n_types, d, 1)
+            gammas = np.ones((n_types, d, 1))
+#            gammas = np.random.uniform(1.0, 2.0, size=n_types * d).reshape(
+#                n_types, d, 1
+#            )
         else:
             etas = types["etas"]
             gammas = types["gammas"]
         if not prop:
-            self.prop = np.ones(n_types) * (1/n_types)
+            self.prop = np.ones(n_types) * (1 / n_types)
         else:
             self.prop = prop
-        np.testing.assert_allclose(np.sum(self.prop), 1.)
-        
-        #Create representative agents
+        np.testing.assert_allclose(np.sum(self.prop), 1.0)
+        self.n_agent_types = np.random.choice(list(range(self.n_types)), self.n, p=self.prop)
+
+        # Create representative agents
         self.agents = []
         for i in range(n_types):
             self.agents.append(Agent(etas[i], gammas[i]))
-    
+
+        self.etas = None 
+        self.gammas = None
+
+    def get_etas(self):
+        """Method that returns the etas for all agents in the distribution.
+
+        Returns:
+        etas -- (N, D, 1) array
+        """
+        if self.etas is None:
+            etas = []
+            for i in range(self.n):
+                # get type of ith agent
+                agent_type = self.n_agent_types[i]
+                #get agent that has  type agent_type
+                agent = self.agents[agent_type]
+                #get eta
+                etas.append(agent.eta)
+            etas = np.array(etas).reshape(self.n, self.d, 1)
+            self.etas = etas
+            return etas
+        else:
+            return self.etas
+
+    def get_gammas(self):
+        """Method that returns the gammas for all agents in the distribution
+
+        Returns:
+        gammas -- (N, D, 1) array
+        """
+        if self.gammas is None:
+            gammas = []
+            for i in range(self.n):
+                # get type of ith agent
+                agent_type = self.n_agent_types[i]
+                #get agent that has  type agent_type
+                agent = self.agents[agent_type]
+                #get eta
+                gammas.append(agent.gamma)
+            gammas = np.array(gammas).reshape(self.n, self.d, 1)
+            self.gammas = gammas
+            return gammas
+        else:
+            return self.gammas
+
+
     def best_response_distribution(self, beta, s, sigma):
         """This is a method that returns the best response of each agent type to a model and threshold.
         
@@ -56,7 +107,7 @@ class AgentDistribution:
         for agent in self.agents:
             br.append(agent.best_response(s, beta, sigma))
         return br
-    
+
     def best_response_score_distribution(self, beta, s, sigma):
         """This is a method that returns the score of the best response of each agent type to a model and threshold.
         
@@ -68,9 +119,12 @@ class AgentDistribution:
         Returns:
         br_dist -- a (n_types,) dimensional array
         """
-        br_dist = [np.matmul(np.transpose(beta), x).item() for x in self.best_response_distribution(beta, s, sigma)]
+        br_dist = [
+            np.matmul(np.transpose(beta), x).item()
+            for x in self.best_response_distribution(beta, s, sigma)
+        ]
         return np.array(br_dist)
-    
+
     def best_response_noisy_score_distribution(self, beta, s, sigma):
         """This is a method that returns the distribution over agent scores after noise has been added
         
@@ -80,18 +134,16 @@ class AgentDistribution:
         sigma -- standard deviation of noise distribution(float)
         
         Returns:
-        br_dist -- a (N x 1) dimensional array
+        br_dist -- a (N, 1) dimensional array
         """
-        noisy_scores = norm.rvs(loc=0., scale=sigma, size=self.n)
+        noisy_scores = norm.rvs(loc=0.0, scale=sigma, size=self.n)
         br_dist = self.best_response_score_distribution(beta, s, sigma)
-        
-        n_agent_types = np.random.choice(list(range(self.n_types)), self.n, p=self.prop)
-        n_br = br_dist[n_agent_types]
+
+        n_br = br_dist[self.n_agent_types]
         noisy_scores += n_br
 
         return noisy_scores.reshape(self.n, 1)
-    
-    
+
     def quantile_best_response(self, beta, s, sigma, q):
         """The method returns the qth quantile of the noisy score distribution.
         
@@ -106,7 +158,7 @@ class AgentDistribution:
         noisy_scores = self.best_response_noisy_score_distribution(beta, s, sigma)
         q_quantile = np.quantile(noisy_scores, q)
         return q_quantile.item()
-    
+
     def plot_quantile_best_response(self, beta, sigma, q):
         """This method plots the quantile of the noisy score distribution vs. thresholds.
         
@@ -118,13 +170,15 @@ class AgentDistribution:
         """
         bounds = compute_score_bounds(beta)
         thresholds = np.linspace(bounds[0], bounds[1], 50)
-        quantile_br = [self.quantile_best_response(beta, s, sigma, q) for s in thresholds]
-        
+        quantile_br = [
+            self.quantile_best_response(beta, s, sigma, q) for s in thresholds
+        ]
+
         plt.plot(thresholds, quantile_br)
         plt.xlabel("Thresholds")
         plt.ylabel("Quantile BR")
         plt.title("Quantile BR vs. Threshold")
-        
+
     def quantile_fixed_point_polyfit(self, beta, sigma, q):
         """This method computes the fixed point of the quantile best response.
         
@@ -143,8 +197,10 @@ class AgentDistribution:
         """
         bounds = compute_score_bounds(beta)
         thresholds = np.linspace(bounds[0], bounds[1], 50)
-        quantile_br = [self.quantile_best_response(beta, s, sigma, q) for s in thresholds]
-        
+        quantile_br = [
+            self.quantile_best_response(beta, s, sigma, q) for s in thresholds
+        ]
+
         z = np.polyfit(thresholds.flatten(), quantile_br, 3)
         f = np.poly1d(z)
         granular_thresholds = np.linspace(bounds[0], bounds[1], 200)
@@ -152,8 +208,10 @@ class AgentDistribution:
         idx = np.argmin(np.abs(approx_quantile_best_response - granular_thresholds))
         fixed_point = granular_thresholds[idx]
         return fixed_point.item()
-    
-    def quantile_fixed_point_iteration(self, beta, sigma, q, maxiter=200, s0=0.5, plot=False):
+
+    def quantile_fixed_point_iteration(
+        self, beta, sigma, q, maxiter=200, s0=0.5, plot=False
+    ):
         """This method computes the fixed point of the quantile best response.
         
         This method computes the fixed point of the quantile best response mapping 
@@ -171,16 +229,24 @@ class AgentDistribution:
         """
         bounds = compute_score_bounds(beta)
         thresholds = np.linspace(bounds[0], bounds[1], 50)
-        
+
         all_s = [s0]
-        s= s0
+        s = s0
         for k in range(maxiter):
             new_s = self.quantile_best_response(beta, s, sigma, q)
             all_s.append(new_s)
             s = new_s
             if plot and k % 50 == 0 and k > 0:
-                print("hello")
                 plt.plot(list(range(len(all_s))), all_s)
                 plt.show()
                 plt.close()
-        return s        
+        return s
+
+if __name__ == "__main__":
+
+    agent_dist = AgentDistribution()
+    etas = agent_dist.get_etas()
+    gammas = agent_dist.get_gammas()
+    etas2 = agent_dist.get_etas()
+    print(etas.shape)
+    print(gammas.shape)
