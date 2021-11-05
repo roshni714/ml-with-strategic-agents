@@ -1,4 +1,5 @@
 from scipy.stats import norm
+from scipy.interpolate import interp1d
 import matplotlib.pyplot as plt
 import numpy as np
 
@@ -26,8 +27,8 @@ class AgentDistribution:
         self.prop = prop
         if types is None:
             # Generate n_types agent types randomly
-            etas = np.random.uniform(0.0, 0.3, size=n_types * d).reshape(n_types, d, 1)
-            gammas = np.ones((n_types, d, 1))
+            etas = np.random.uniform(0.4, 0.6, size=n_types * d).reshape(n_types, d, 1)
+            gammas = np.ones((n_types, d, 1)) * 4
 #            gammas = np.random.uniform(1.0, 2.0, size=n_types * d).reshape(
 #                n_types, d, 1
 #            )
@@ -46,8 +47,6 @@ class AgentDistribution:
         for i in range(n_types):
             self.agents.append(Agent(etas[i], gammas[i]))
 
-        self.etas = None 
-        self.gammas = None
 
     def get_etas(self):
         """Method that returns the etas for all agents in the distribution.
@@ -55,20 +54,16 @@ class AgentDistribution:
         Returns:
         etas -- (N, D, 1) array
         """
-        if self.etas is None:
-            etas = []
-            for i in range(self.n):
-                # get type of ith agent
-                agent_type = self.n_agent_types[i]
-                #get agent that has  type agent_type
-                agent = self.agents[agent_type]
-                #get eta
-                etas.append(agent.eta)
-            etas = np.array(etas).reshape(self.n, self.d, 1)
-            self.etas = etas
-            return etas
-        else:
-            return self.etas
+        etas = []
+        for i in range(self.n):
+            # get type of ith agent
+            agent_type = self.n_agent_types[i]
+            #get agent that has  type agent_type
+            agent = self.agents[agent_type]
+            #get eta
+            etas.append(agent.eta)
+        etas = np.array(etas).reshape(self.n, self.d, 1)
+        return etas
 
     def get_gammas(self):
         """Method that returns the gammas for all agents in the distribution
@@ -76,20 +71,16 @@ class AgentDistribution:
         Returns:
         gammas -- (N, D, 1) array
         """
-        if self.gammas is None:
-            gammas = []
-            for i in range(self.n):
-                # get type of ith agent
-                agent_type = self.n_agent_types[i]
+        gammas = []
+        for i in range(self.n):
+            # get type of ith agent
+            agent_type = self.n_agent_types[i]
                 #get agent that has  type agent_type
-                agent = self.agents[agent_type]
+            agent = self.agents[agent_type]
                 #get eta
-                gammas.append(agent.gamma)
-            gammas = np.array(gammas).reshape(self.n, self.d, 1)
-            self.gammas = gammas
-            return gammas
-        else:
-            return self.gammas
+            gammas.append(agent.gamma)
+        gammas = np.array(gammas).reshape(self.n, self.d, 1)
+        return gammas
 
 
     def best_response_distribution(self, beta, s, sigma):
@@ -105,7 +96,7 @@ class AgentDistribution:
         """
         br = []
         for agent in self.agents:
-            br.append(agent.best_response(s, beta, sigma))
+            br.append(agent.best_response(beta, s,  sigma))
         return br
 
     def best_response_score_distribution(self, beta, s, sigma):
@@ -136,12 +127,14 @@ class AgentDistribution:
         Returns:
         br_dist -- a (N, 1) dimensional array
         """
+        bounds = compute_score_bounds(beta)
         noisy_scores = norm.rvs(loc=0.0, scale=sigma, size=self.n)
         br_dist = self.best_response_score_distribution(beta, s, sigma)
 
         n_br = br_dist[self.n_agent_types]
         noisy_scores += n_br
-
+        noisy_scores = np.clip(noisy_scores, a_min=bounds[0], a_max=bounds[1])
+        
         return noisy_scores.reshape(self.n, 1)
 
     def quantile_best_response(self, beta, s, sigma, q):
@@ -179,7 +172,56 @@ class AgentDistribution:
         plt.ylabel("Quantile BR")
         plt.title("Quantile BR vs. Threshold")
 
-    def quantile_fixed_point_polyfit(self, beta, sigma, q):
+    def quantile_fixed_point_true_distribution(self, beta, sigma, q, plot=False):
+        bounds = compute_score_bounds(beta)
+        thresholds = np.linspace(bounds[0], bounds[1], 50)
+
+        quantile_br = []
+        for s in thresholds:
+            cdf_val = 0.
+            for i, agent in enumerate(self.agents):
+                cdf_val += norm.cdf(s - np.matmul(beta.T, agent.best_response(s, beta, sigma)), loc=0., scale=sigma) * self.prop[i]
+            quantile_br.append(cdf_val.item())
+
+        quantile_br = np.array(quantile_br).reshape(thresholds.shape)
+        f = interp1d(thresholds, quantile_br, kind="linear")
+        granular_thresholds = np.linspace(bounds[0], bounds[1], 200)
+        idx = np.argmin(np.abs(np.ones(granular_thresholds.shape) * q - f(granular_thresholds)) )
+
+
+        if plot:
+            plt.plot(thresholds, quantile_br, label="actual curve")
+            plt.plot(granular_thresholds, f(granular_thresholds), label="interpolation")
+            plt.plot(thresholds, q * np.ones(thresholds.shape), label="quantile")
+            plt.legend()
+            plt.xlabel("Threshold s")
+            plt.ylabel("F_s(s)")
+            plt.title("F_s(s) vs. s")
+            plt.show()
+            plt.close()
+
+        return granular_thresholds[idx]
+
+    def quantile_fixed_point_naive(self, beta, sigma, q, plot=False):
+        bounds = compute_score_bounds(beta)
+        thresholds = np.linspace(bounds[0], bounds[1], 50)
+        quantile_br = [
+            self.quantile_best_response(beta, s, sigma, q) for s in thresholds
+        ]
+        idx = np.argmin(np.abs(quantile_br - thresholds))
+        fixed_point = thresholds[idx]
+
+        if plot:
+            plt.plot(thresholds, quantile_br)
+            plt.xlabel("Thresholds")
+            plt.ylabel("Quantile Best Response")
+            plt.title("Quantile Best Response (from Empirical Distribution)")
+            plt.show()
+            plt.close()
+
+        return fixed_point.item()
+
+    def quantile_fixed_point_polyfit(self, beta, sigma, q, plot=False):
         """This method computes the fixed point of the quantile best response.
         
         This method computes the fixed point of the quantile best response mapping 
@@ -190,6 +232,7 @@ class AgentDistribution:
         s -- threshold (float)
         sigma -- standard deviation of noise distribution(float)
         q -- quantile between 0 and 1 (float)
+        plot -- optional plotting argument (False)
         
         Returns:
         fixed_point -- fixed point of the quantile best response (float)
@@ -207,6 +250,16 @@ class AgentDistribution:
         approx_quantile_best_response = f(granular_thresholds)
         idx = np.argmin(np.abs(approx_quantile_best_response - granular_thresholds))
         fixed_point = granular_thresholds[idx]
+
+        if plot:
+            plt.plot(granular_thresholds, approx_quantile_best_response)
+            plt.plot(thresholds, quantile_br)
+            plt.xlabel("Thresholds")
+            plt.ylabel("Quantile Best Response")
+            plt.title("Quantile Best Response Approximation")
+            plt.show()
+            plt.close()
+
         return fixed_point.item()
 
     def quantile_fixed_point_iteration(
@@ -241,6 +294,12 @@ class AgentDistribution:
                 plt.show()
                 plt.close()
         return s
+
+    def resample(self):
+        self.n_agent_types = np.random.choice(list(range(self.n_types)), self.n, p=self.prop)
+        # reset etas and gammas
+        _ = self.get_etas()
+        _ = self.get_gammas()
 
 if __name__ == "__main__":
 

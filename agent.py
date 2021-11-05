@@ -17,7 +17,7 @@ class Agent:
         self.eta = eta
         self.gamma = gamma
 
-    def best_response(self, s, beta, sigma):
+    def best_response(self, beta, s,  sigma):
         """Method for computing an agent's best response given a particular model and threshold under a noise assumption.
 
         Keyword arguments:
@@ -38,7 +38,7 @@ class Agent:
                     self.eta, self.gamma, beta, s, sigma
                 )
             )
-        val = np.clip(val, a_min=0.0, a_max=1.0)
+        val = np.clip(val, a_min=-1.0, a_max=1.0)
         return val
 
     def plot_best_response_score(self, beta, sigma):
@@ -81,4 +81,4 @@ if __name__ == "__main__":
     beta = np.array([np.sin(np.pi / 4), np.cos(np.pi / 4)]).reshape(2, 1)
     sigma = 0.35
     s = 0.5
-    print(agent.best_response(s, beta, sigma))
+    print(agent.best_response(beta, s, sigma))
