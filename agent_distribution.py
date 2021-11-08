@@ -97,7 +97,7 @@ class AgentDistribution:
             br.append(agent.best_response(beta, s,  sigma))
         return br
 
-    def jacobian_beta_distribution(self, beta, s, sigma):
+    def br_gradient_beta_distribution(self, beta, s, sigma):
         """This is a method that returns the best response of each agent type to a model and threshold and the jacobian matrix.
         
         Keyword arguments:
@@ -112,11 +112,12 @@ class AgentDistribution:
         br = []
         jac = []
         for agent in self.agents:
-            br.append(agent.best_response(beta, s,  sigma))
-            jac.append(agent.jacobian_beta(beta, s, sigma))
+            b, j = agent.br_gradient_beta(beta, s, sigma)
+            jac.append(j)
+            br.append(b)
         return br, jac
-
-   def derivative_s_distribution(self, beta, s, sigma):
+    
+    def br_gradient_s_distribution(self, beta, s, sigma):
         """This is a method that returns the best response of each agent type to a model and threshold and the derivative wrt to s.
         
         Keyword arguments:
@@ -131,9 +132,10 @@ class AgentDistribution:
         br = []
         deriv_s = []
         for agent in self.agents:
-            br.append(agent.best_response(beta, s,  sigma))
-            deriv_s.append(agent.derivative_s(beta, s, sigma))
-        return br, jac
+            b, d = agent.br_gradient_s(beta, s, sigma)
+            deriv_s.append(d)
+            br.append(b)
+        return br, deriv_s
 
 
     def best_response_score_distribution(self, beta, s, sigma):

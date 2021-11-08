@@ -73,7 +73,18 @@ class Agent:
 
         return f
 
-    def jacobian_beta(self, beta, s, sigma):
+    def br_gradient_beta(self, beta, s, sigma):
+        """
+        Computes of the Jacobian of the best response wrt to beta.
+
+        Keyword arguments:
+        beta -- model parameters (D, 1)
+        s -- threshold (float)
+        sigma -- standard deviation of the noise distribution (float)
+
+        Returns:
+        jacobian -- (D, D) matrix
+        """
         G = np.diag(self.gamma.flatten())
         best_response = self.best_response(beta, s, sigma)
         arg = s - np.matmul(beta.T, best_response)
@@ -83,7 +94,19 @@ class Agent:
         jacobian = prob * np.linalg.inv(2 * G + prob_prime * rank_one_mat)
         return jacobian
 
-    def derivative_s(self, beta, s, sigma):
+    def br_gradient_s(self, beta, s, sigma):
+        """
+        Computes of the gradient of the best response wrt to s.
+
+        Keyword arguments:
+        beta -- model parameters (D, 1)
+        s -- threshold (float)
+        sigma -- standard deviation of the noise distribution (float)
+
+        Returns:
+        jacobian -- (D, D) matrix
+        """
+
         G = np.diag(self.gamma.flatten())
         best_response = self.best_response(beta, s, sigma)
         arg = s - np.matmul(beta.T, best_response)
