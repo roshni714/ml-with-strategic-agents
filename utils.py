@@ -1,4 +1,5 @@
 import numpy as np
+from scipy.interpolate import interp1d
 
 def compute_continuity_noise(agent_dist):
     """Method that returns the standard deviation of the noise distribution for ensuring continuity.
@@ -35,3 +36,53 @@ def compute_score_bounds(beta):
 
     scores = [np.matmul(beta.T, x.reshape(2, 1)).item() for x in x_box]
     return min(scores), max(scores)
+
+def fixed_point_interpolation_true_distribution(agent_dist, sigma, q, plot=False, savefig=None):
+    """Method that returns a function that maps model parameters to the fixed point it induces.
+
+    The function is estimated by doing a linear interpolation of the fixed points from theta
+    (a 1-dimensional parametrization of beta). theta -> beta = [cos (theta),  sin(theta)]
+    The function maps theta -> s_beta.
+
+    Keyword args:
+    agent_dist -- AgentDistribution
+    sigma -- standard deviation of the noise distribution (float)
+    q -- quantile (float)
+    plot -- optional plotting argument
+    savefig -- path to save figure
+
+    Returns:
+    f -- interp1d object that maps theta to s_beta
+    """
+    dim = agent_dist.d
+    assert dim==2, "Method does not work for dimension {}".format(dim)
+
+    thetas = np.linspace(-np.pi, np.pi, 50)
+    fixed_points = []
+    betas = []
+
+    #compute beta and fixed point for each theta
+    print("Computing fixed points...")
+    for theta in thetas:
+        beta = np.array([np.cos(theta), np.sin(theta)]).reshape(dim, 1)
+        fp = agent_dist.quantile_fixed_point_true_distribution(beta, sigma, q, plot=True)
+        fixed_points.append(fp)
+        betas.append(beta)
+
+    f = interp1d(thetas, fixed_points, kind="cubic")
+
+    if plot:
+        plt.plot(thetas, fixed_points, label="actual")
+        plt.plot(thetas, f(thetas), label="interpolation")
+        plt.xlabel("Thetas (corresponds to different Beta)")
+        plt.ylabel("s_beta")
+        plt.title("Location of Fixed Points: s_beta vs. beta")
+        plt.legend()
+        if savefig is not None:
+            plt.savefig(savefig)
+        plt.show()
+        plt.close()
+
+    return f
+
+

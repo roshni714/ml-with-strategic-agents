@@ -45,7 +45,7 @@ class Agent:
         bounds = compute_score_bounds(beta)
         thresholds = np.linspace(bounds[0], bounds[1], 50)
         br = [
-            np.matmul(np.transpose(beta), self.best_response(s, beta, sigma)).item()
+            np.matmul(np.transpose(beta), self.best_response(beta, s, sigma)).item()
             for s in thresholds
         ]
         plt.xlabel("Threshold")
@@ -72,6 +72,28 @@ class Agent:
             return (cost_of_gaming + allocation).flatten()
 
         return f
+
+    def jacobian_beta(self, beta, s, sigma):
+        G = np.diag(self.gamma.flatten())
+        best_response = self.best_response(beta, s, sigma)
+        arg = s - np.matmul(beta.T, best_response)
+        prob = norm.pdf(arg, loc=0, scale=sigma)
+        prob_prime = - (arg/(sigma ** 2)) * norm.pdf(arg, loc=0, scale=sigma)
+        rank_one_mat = np.matmul(beta, beta.T)
+        jacobian = prob * np.linalg.inv(2 * G + prob_prime * rank_one_mat)
+        return jacobian
+
+    def derivative_s(self, beta, s, sigma):
+        G = np.diag(self.gamma.flatten())
+        best_response = self.best_response(beta, s, sigma)
+        arg = s - np.matmul(beta.T, best_response)
+        prob_prime = -(arg/(sigma **2)) * norm.pdf(arg, loc=0, scale=sigma)
+        rank_one_mat = np.matmul(beta, beta.T)
+        deriv_s = np.matmul(np.linalg.inv(2 * G + probprime * rank_one_mat) * prob_prime, beta)
+        return deriv_s
+
+
+
 
 
 if __name__ == "__main__":
