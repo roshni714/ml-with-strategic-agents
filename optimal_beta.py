@@ -1,58 +1,9 @@
 import numpy as np
 import matplotlib.pyplot as plt
 from scipy.stats import norm
-from scipy.interpolate import interp1d
 
 from agent_distribution import AgentDistribution
 from utils import compute_continuity_noise, compute_contraction_noise, compute_score_bounds
-
-def fixed_point_interpolation_true_distribution(agent_dist, sigma, q, plot=False, savefig=None):
-    """Method that returns a function that maps model parameters to the fixed point it induces.
-
-    The function is estimated by doing a linear interpolation of the fixed points from theta
-    (a 1-dimensional parametrization of beta). theta -> beta = [cos (theta),  sin(theta)]
-    The function maps theta -> s_beta.
-
-    Keyword args:
-    agent_dist -- AgentDistribution
-    sigma -- standard deviation of the noise distribution (float)
-    q -- quantile (float)
-    plot -- optional plotting argument
-    savefig -- path to save figure
-
-    Returns:
-    f -- interp1d object that maps theta to s_beta
-    """
-    dim = agent_dist.d
-    assert dim==2, "Method does not work for dimension {}".format(dim)
-
-    thetas = np.linspace(-np.pi, np.pi, 50)
-    fixed_points = []
-    betas = []
-
-    #compute beta and fixed point for each theta
-    print("Computing fixed points...")
-    for theta in thetas:
-        beta = np.array([np.cos(theta), np.sin(theta)]).reshape(dim, 1)
-        fp = agent_dist.quantile_fixed_point_true_distribution(beta, sigma, q, plot=True)
-        fixed_points.append(fp)
-        betas.append(beta)
-
-    f = interp1d(thetas, fixed_points, kind="cubic")
-
-    if plot:
-        plt.plot(thetas, fixed_points, label="actual")
-        plt.plot(thetas, f(thetas), label="interpolation")
-        plt.xlabel("Thetas (corresponds to different Beta)")
-        plt.ylabel("s_beta")
-        plt.title("Location of Fixed Points: s_beta vs. beta")
-        plt.legend()
-        if savefig is not None:
-            plt.savefig(savefig)
-        plt.show()
-        plt.close()
-
-    return f
 
 def empirical_policy_loss(agent_dist, beta, s, sigma, q, true_beta=None):
     """Method that returns the empirical policy loss incurred given an agent distribution and model and threshold.
@@ -127,6 +78,79 @@ def optimal_beta_empirical_policy_loss(agent_dist, sigma, q, f, true_beta=None, 
         plt.title("Empirical Loss Incurred at Different Beta")
         if savefig:
             plt.savefig(savefig)
+        plt.show()
+        plt.close()
 
-    return min_loss, opt_beta, opt_s_beta
+    return min_loss, opt_beta, opt_s_beta, thetas, losses
+
+
+def expected_policy_loss(agent_dist, theta, sigma, f, true_beta=None):
+    """Method that computes the expected policy loss of deploying a particular model.
+    
+    Keyword args:
+    agent_dist -- AgentDistribution
+    beta -- model parameters
+    sigma -- standard deviation of noise distribution
+    f -- function that maps arctan(beta[1]/beta[0]) -> s_beta (fixed point)
+    true_beta -- optional ideal model
+    
+    
+    Returns:
+    loss -- expected policy loss at beta
+    """
+    dim = agent_dist.d
+    assert dim==2, "Method does not work for dimension {}".format(dim)
+    
+    beta = np.array([np.cos(theta), np.sin(theta)]).reshape(2, 1)
+    if true_beta is None:
+        true_beta = np.zeros(beta.shape)
+        true_beta[0] = 1.
+    
+    bounds = compute_score_bounds(beta)
+    s = np.clip(f(theta), a_min=bounds[0], a_max = bounds[1])
+    true_scores = np.array([np.matmul(true_beta.T, agent.eta).item() for agent in agent_dist.agents]) 
+    br_dist = agent_dist.best_response_score_distribution(beta, s, sigma)
+    z = s - br_dist
+    
+    prob = 1- norm.cdf(x=z, loc=0., scale=sigma)
+    product = -true_scores * prob * agent_dist.prop
+        
+    return np.sum(product).item() #np.sum(product).item()
+
+
+def optimal_beta_expected_policy_loss(agent_dist, sigma, f, true_beta=None, plot=False, savefig=None):
+    """Method returns the model parameters that minimize the expected policy loss.
+    
+    Keyword args:
+    agent_dist -- AgentDistribution
+    sigma -- standard deviation of noise distribution
+    f -- function that maps arctan(beta[1]/beta[0]) -> s_beta (fixed point)
+    true_beta -- optional ideal model
+    plot -- optional plotting 
+    savefig -- path to save figure
+    """
+    dim = agent_dist.d
+    assert dim==2, "Method does not work for dimension {}".format(dim)
+        
+    thetas = np.linspace(-np.pi, np.pi, 50)
+    losses = []
+    for theta in thetas:
+        loss = expected_policy_loss(agent_dist, theta, sigma, f, true_beta)
+        losses.append(loss)
+        
+    idx = np.argmin(losses)
+    min_loss = losses[idx]
+    opt_beta = np.array([np.cos(thetas[idx]), np.sin(thetas[idx])]).reshape(2, 1)
+    opt_s_beta = f(thetas[idx])
+    if plot:
+        plt.plot(thetas, losses)
+        plt.xlabel("Theta (Represents Beta)")
+        plt.ylabel("Expected Loss")
+        plt.title("Expected Loss Incurred at Different Beta")
+        if savefig:
+            plt.savefig(savefig)
+        plt.show()
+        plt.close()
+        
+    return min_loss, opt_beta, opt_s_beta, thetas, losses
 

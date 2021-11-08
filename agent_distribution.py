@@ -30,8 +30,6 @@ class AgentDistribution:
             etas = np.random.uniform(0.4, 0.6, size=n_types * d).reshape(n_types, d, 1)
             gammas = np.ones((n_types, d, 1)) * 4
 #            gammas = np.random.uniform(1.0, 2.0, size=n_types * d).reshape(
-#                n_types, d, 1
-#            )
         else:
             etas = types["etas"]
             gammas = types["gammas"]
@@ -98,6 +96,45 @@ class AgentDistribution:
         for agent in self.agents:
             br.append(agent.best_response(beta, s,  sigma))
         return br
+
+    def jacobian_beta_distribution(self, beta, s, sigma):
+        """This is a method that returns the best response of each agent type to a model and threshold and the jacobian matrix.
+        
+        Keyword arguments:
+        beta -- model parameters
+        s -- threshold
+        sigma -- standard deviation of noise distribution
+        
+        Returns:
+        br -- a list of np.arrays of dimension (D, 1)
+        jac -- a list of np.arrays of dimension (D, D)
+        """
+        br = []
+        jac = []
+        for agent in self.agents:
+            br.append(agent.best_response(beta, s,  sigma))
+            jac.append(agent.jacobian_beta(beta, s, sigma))
+        return br, jac
+
+   def derivative_s_distribution(self, beta, s, sigma):
+        """This is a method that returns the best response of each agent type to a model and threshold and the derivative wrt to s.
+        
+        Keyword arguments:
+        beta -- model parameters
+        s -- threshold
+        sigma -- standard deviation of noise distribution
+        
+        Returns:
+        br -- a list of np.arrays of dimension (D, 1)
+        deriv_s -- a list of np.arrays of dimension (D, 1)
+        """
+        br = []
+        deriv_s = []
+        for agent in self.agents:
+            br.append(agent.best_response(beta, s,  sigma))
+            deriv_s.append(agent.derivative_s(beta, s, sigma))
+        return br, jac
+
 
     def best_response_score_distribution(self, beta, s, sigma):
         """This is a method that returns the score of the best response of each agent type to a model and threshold.
@@ -180,27 +217,24 @@ class AgentDistribution:
         for s in thresholds:
             cdf_val = 0.
             for i, agent in enumerate(self.agents):
-                cdf_val += norm.cdf(s - np.matmul(beta.T, agent.best_response(s, beta, sigma)), loc=0., scale=sigma) * self.prop[i]
+                cdf_val += norm.cdf(s - np.matmul(beta.T, agent.best_response(beta, s, sigma)), loc=0., scale=sigma) * self.prop[i]
             quantile_br.append(cdf_val.item())
 
         quantile_br = np.array(quantile_br).reshape(thresholds.shape)
-        f = interp1d(thresholds, quantile_br, kind="linear")
-        granular_thresholds = np.linspace(bounds[0], bounds[1], 200)
-        idx = np.argmin(np.abs(np.ones(granular_thresholds.shape) * q - f(granular_thresholds)) )
-
+        f = interp1d(quantile_br, thresholds, kind="linear")
+        granular_thresholds = np.linspace(min(quantile_br), max(quantile_br), 100)
 
         if plot:
-            plt.plot(thresholds, quantile_br, label="actual curve")
+            plt.plot(quantile_br, thresholds, label="actual curve")
             plt.plot(granular_thresholds, f(granular_thresholds), label="interpolation")
-            plt.plot(thresholds, q * np.ones(thresholds.shape), label="quantile")
             plt.legend()
-            plt.xlabel("Threshold s")
-            plt.ylabel("F_s(s)")
-            plt.title("F_s(s) vs. s")
+            plt.xlabel("F_s(s)")
+            plt.ylabel("s")
+            plt.title("s vs. F_s(s)")
             plt.show()
             plt.close()
 
-        return granular_thresholds[idx]
+        return f(q)
 
     def quantile_fixed_point_naive(self, beta, sigma, q, plot=False):
         bounds = compute_score_bounds(beta)
