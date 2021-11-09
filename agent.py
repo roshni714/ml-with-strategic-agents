@@ -1,7 +1,9 @@
 from scipy.stats import norm
 from scipy.optimize import newton
+from scipy.interpolate import interp1d
 import numpy as np
 import matplotlib.pyplot as plt
+
 from utils import compute_score_bounds
 
 
@@ -72,6 +74,31 @@ class Agent:
             return (cost_of_gaming + allocation).flatten()
 
         return f
+
+    def br_score_function_s(self, beta, sigma):
+        bounds = compute_score_bounds(beta)
+        thresholds = np.linspace(bounds[0], bounds[1], 50)
+        br = [
+            np.matmul(np.transpose(beta), self.best_response(beta, s, sigma)).item()
+            for s in thresholds
+        ]
+
+        f = interp1d(thresholds, br)
+        return f
+
+    def br_score_function_beta(self, s, sigma):
+        thetas = np.linspace(-np.pi, np.pi, 100)
+        br = []
+        valid_theta = []
+        for theta in thetas:
+            beta = np.array([np.cos(theta), np.sin(theta)]).reshape(2, 1)
+            bounds = compute_score_bounds(beta)
+            if s >= bounds[0] and s <= bounds[1]:
+                br.append(np.matmul(beta.T, self.best_response(beta, s, sigma)).item())
+                valid_theta.append(theta)
+
+        f = interp1d(valid_theta, br)
+        return f, valid_theta
 
     def br_gradient_beta(self, beta, s, sigma):
         """

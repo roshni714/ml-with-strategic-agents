@@ -30,12 +30,13 @@ def expected_gradient_loss_beta(agent_dist, theta, sigma, f, true_beta=None):
     s = np.clip(f(theta), a_min=bounds[0], a_max = bounds[1])
     true_scores = np.array([-np.matmul(true_beta.T, agent.eta).item() for agent in agent_dist.agents]).reshape(len(agent_dist.agents), 1)
     br_dist, jacobian_dist = agent_dist.br_gradient_beta_distribution(beta, s, sigma)
-    z = s - br_dist
+    z = s - np.array([np.matmul(beta.T, x) for x in  br_dist]).reshape(len(br_dist), 1)
     prob = norm.pdf(z, loc=0., scale=sigma)
     vec = np.array([np.matmul(beta.T, jacobian_dist[i]) + br_dist[i].T for i in range(len(br_dist))]).reshape(len(agent_dist.agents), len(beta))
-    res = vec * true_scores * agent_dist.prop.reshape(len(agent_dist.prop), 1)
+    res = prob * vec * true_scores * agent_dist.prop.reshape(len(agent_dist.prop), 1)
 
-    d_l_d_beta = np.mean(res, axis=0)
+    
+    d_l_d_beta = np.sum(res, axis=0)
     return d_l_d_beta
 
 def empirical_gradient_loss_beta(agent_dist, beta, s, sigma, q, true_beta=None, perturbation_size=0.1):
@@ -132,6 +133,8 @@ def plot_grad_loss_beta(agent_dist, sigma, q, f, true_beta=None, savefig=None):
         emp_vec_beta = empirical_gradient_loss_beta(agent_dist, beta, s_beta, sigma, q, true_beta)
         emp_grad_beta1.append(emp_vec_beta[0].item())
         emp_grad_beta2.append(emp_vec_beta[1].item())
+        
+        print(vec_beta, emp_vec_beta)
 
     fig, ax = plt.subplots(1, 2, figsize=(12,5))
 
@@ -147,6 +150,7 @@ def plot_grad_loss_beta(agent_dist, sigma, q, f, true_beta=None, savefig=None):
     ax[1].set_title("Beta vs. dL/dbeta2")
     if savefig is not None:
         plt.savefig(savefig)
+    plt.legend()
     plt.show()
     plt.close()
     
