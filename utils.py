@@ -47,6 +47,12 @@ def compute_score_bounds(beta):
     scores = [np.matmul(beta.T, x.reshape(2, 1)).item() for x in x_box]
     return min(scores), max(scores)
 
+def spherical_coordinates(beta):
+    assert beta.shape[0] == 2, "Method does not work for beta with dim {}".format(
+        beta.shape[0]
+    )
+
+    return np.arctan2(beta[1], beta[0])
 
 def fixed_point_interpolation_true_distribution(
     agent_dist, sigma, q, plot=False, savefig=None
