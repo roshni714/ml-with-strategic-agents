@@ -133,24 +133,22 @@ def plot_grad_loss_beta(agent_dist, sigma, q, f, true_beta=None, savefig=None):
         emp_vec_beta = empirical_gradient_loss_beta(agent_dist, beta, s_beta, sigma, q, true_beta)
         emp_grad_beta1.append(emp_vec_beta[0].item())
         emp_grad_beta2.append(emp_vec_beta[1].item())
-        
-        print(vec_beta, emp_vec_beta)
 
     fig, ax = plt.subplots(1, 2, figsize=(12,5))
 
-    ax[0].plot(thetas, grad_beta1, label="expected")
     ax[0].plot(thetas, emp_grad_beta1, label="empirical")
+    ax[0].plot(thetas, grad_beta1, label="expected")
     ax[0].set_xlabel("Theta (Corresponds to Beta)")
     ax[0].set_ylabel("dL/dbeta1")
     ax[0].set_title("Beta vs. dL/dbeta1")
-    ax[1].plot(thetas, grad_beta2, label="expected")
     ax[1].plot(thetas, emp_grad_beta2, label="empirical")
+    ax[1].plot(thetas, grad_beta2, label="expected")
     ax[1].set_xlabel("Theta (Corresponds to Beta)")
     ax[1].set_ylabel("dL/dbeta2")
     ax[1].set_title("Beta vs. dL/dbeta2")
+    plt.legend()
     if savefig is not None:
         plt.savefig(savefig)
-    plt.legend()
     plt.show()
     plt.close()
     
