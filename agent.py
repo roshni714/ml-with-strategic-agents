@@ -89,16 +89,14 @@ class Agent:
     def br_score_function_beta(self, s, sigma):
         thetas = np.linspace(-np.pi, np.pi, 100)
         br = []
-        valid_theta = []
         for theta in thetas:
             beta = np.array([np.cos(theta), np.sin(theta)]).reshape(2, 1)
             bounds = compute_score_bounds(beta)
-            if s >= bounds[0] and s <= bounds[1]:
-                br.append(np.matmul(beta.T, self.best_response(beta, s, sigma)).item())
-                valid_theta.append(theta)
+            s_clip = np.clip(s, bounds[0], bounds[1])
+            br.append(np.matmul(beta.T, self.best_response(beta, s_clip, sigma)).item())
 
-        f = interp1d(valid_theta, br)
-        return f, valid_theta
+        f = interp1d(thetas, br)
+        return f
 
     def br_gradient_beta(self, beta, s, sigma):
         """
