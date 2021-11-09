@@ -17,7 +17,7 @@ class Agent:
         self.eta = eta
         self.gamma = gamma
 
-    def best_response(self, beta, s,  sigma):
+    def best_response(self, beta, s, sigma):
         """Method for computing an agent's best response given a particular model and threshold under a noise assumption.
 
         Keyword arguments:
@@ -83,16 +83,17 @@ class Agent:
         sigma -- standard deviation of the noise distribution (float)
 
         Returns:
+        best_response -- (D, 1) array
         jacobian -- (D, D) matrix
         """
         G = np.diag(self.gamma.flatten())
         best_response = self.best_response(beta, s, sigma)
         arg = s - np.matmul(beta.T, best_response)
         prob = norm.pdf(arg, loc=0, scale=sigma)
-        prob_prime = - (arg/(sigma ** 2)) * norm.pdf(arg, loc=0, scale=sigma)
+        prob_prime = -(arg / (sigma ** 2)) * norm.pdf(arg, loc=0, scale=sigma)
         rank_one_mat = np.matmul(beta, beta.T)
-        jacobian = prob * np.linalg.inv(2 * G + prob_prime * rank_one_mat)
-        return jacobian
+        jacobian = np.transpose(prob * np.linalg.inv(2 * G + prob_prime * rank_one_mat))
+        return best_response, jacobian
 
     def br_gradient_s(self, beta, s, sigma):
         """
@@ -104,19 +105,19 @@ class Agent:
         sigma -- standard deviation of the noise distribution (float)
 
         Returns:
-        jacobian -- (D, D) matrix
+        best_response -- (D, 1) array
+        deriv_s -- (D, 1) array
         """
 
         G = np.diag(self.gamma.flatten())
         best_response = self.best_response(beta, s, sigma)
         arg = s - np.matmul(beta.T, best_response)
-        prob_prime = -(arg/(sigma **2)) * norm.pdf(arg, loc=0, scale=sigma)
+        prob_prime = -(arg / (sigma ** 2)) * norm.pdf(arg, loc=0, scale=sigma)
         rank_one_mat = np.matmul(beta, beta.T)
-        deriv_s = np.matmul(np.linalg.inv(2 * G + probprime * rank_one_mat) * prob_prime, beta)
-        return deriv_s
-
-
-
+        deriv_s = np.matmul(
+            np.linalg.inv(2 * G + prob_prime * rank_one_mat) * prob_prime, beta
+        )
+        return best_response, deriv_s
 
 
 if __name__ == "__main__":
