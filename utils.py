@@ -1,5 +1,7 @@
 import numpy as np
+import tqdm
 from scipy.interpolate import interp1d
+
 
 def compute_continuity_noise(agent_dist):
     """Method that returns the standard deviation of the noise distribution for ensuring continuity.
@@ -10,7 +12,8 @@ def compute_continuity_noise(agent_dist):
     gammas = agent_dist.get_gammas()
 
     min_eigenvalue = np.min(gammas)
-    return np.sqrt(1/(2 * min_eigenvalue *(np.sqrt(2 * np.pi * np.e)))) + 0.001
+    return np.sqrt(1 / (2 * min_eigenvalue * (np.sqrt(2 * np.pi * np.e)))) + 0.001
+
 
 def compute_contraction_noise(agent_dist):
     """Method that returns the standard deviation of the noise distribution for ensuring contraction.
@@ -21,7 +24,7 @@ def compute_contraction_noise(agent_dist):
     gammas = agent_dist.get_gammas()
 
     min_eigenvalue = np.min(gammas)
-    return np.sqrt(1/(min_eigenvalue *(np.sqrt(2 * np.pi * np.e)))) + 0.001
+    return np.sqrt(1 / (min_eigenvalue * (np.sqrt(2 * np.pi * np.e)))) + 0.001
 
 
 def compute_score_bounds(beta):
@@ -31,13 +34,23 @@ def compute_score_bounds(beta):
     Keyword arguments:
     beta -- modelparameters
     """
-    assert beta.shape[0] == 2, "Method does not work for beta with dim {}".format(beta.shape[0])
-    x_box = [np.array([0., 1.]), np.array([1., 0.]), np.array([1., 1.]), np.array([0., 0.])]
+    assert beta.shape[0] == 2, "Method does not work for beta with dim {}".format(
+        beta.shape[0]
+    )
+    x_box = [
+        np.array([0.0, 1.0]),
+        np.array([1.0, 0.0]),
+        np.array([1.0, 1.0]),
+        np.array([0.0, 0.0]),
+    ]
 
     scores = [np.matmul(beta.T, x.reshape(2, 1)).item() for x in x_box]
     return min(scores), max(scores)
 
-def fixed_point_interpolation_true_distribution(agent_dist, sigma, q, plot=False, savefig=None):
+
+def fixed_point_interpolation_true_distribution(
+    agent_dist, sigma, q, plot=False, savefig=None
+):
     """Method that returns a function that maps model parameters to the fixed point it induces.
 
     The function is estimated by doing a linear interpolation of the fixed points from theta
@@ -55,17 +68,19 @@ def fixed_point_interpolation_true_distribution(agent_dist, sigma, q, plot=False
     f -- interp1d object that maps theta to s_beta
     """
     dim = agent_dist.d
-    assert dim==2, "Method does not work for dimension {}".format(dim)
+    assert dim == 2, "Method does not work for dimension {}".format(dim)
 
     thetas = np.linspace(-np.pi, np.pi, 50)
     fixed_points = []
     betas = []
 
-    #compute beta and fixed point for each theta
+    # compute beta and fixed point for each theta
     print("Computing fixed points...")
-    for theta in thetas:
+    for theta in tqdm.tqdm(thetas):
         beta = np.array([np.cos(theta), np.sin(theta)]).reshape(dim, 1)
-        fp = agent_dist.quantile_fixed_point_true_distribution(beta, sigma, q, plot=True)
+        fp = agent_dist.quantile_fixed_point_true_distribution(
+            beta, sigma, q, plot=False
+        )
         fixed_points.append(fp)
         betas.append(beta)
 
@@ -84,5 +99,3 @@ def fixed_point_interpolation_true_distribution(agent_dist, sigma, q, plot=False
         plt.close()
 
     return f
-
-
