@@ -249,13 +249,13 @@ class AgentDistribution:
         for i, agent in enumerate(self.agents):
             pdf_val += (
                 norm.pdf(
-                    s - np.matmul(beta.T, agent_best_response(beta, s, sigma)),
+                    s - np.matmul(beta.T, agent.best_response(beta, s, sigma)),
                     loc=0.0,
                     scale=sigma,
                 )
                 * self.prop[i]
             )
-        return pdf_val
+        return pdf_val.item()
 
     def quantile_fixed_point_naive(self, beta, sigma, q, plot=False):
         bounds = compute_score_bounds(beta)
