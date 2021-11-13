@@ -2,6 +2,7 @@ from scipy.stats import norm
 from scipy.interpolate import interp1d
 import matplotlib.pyplot as plt
 import numpy as np
+import tqdm
 
 from utils import compute_score_bounds
 from agent import Agent
@@ -28,7 +29,7 @@ class AgentDistribution:
         if types is None:
             # Generate n_types agent types randomly
             etas = np.random.uniform(0.4, 0.6, size=n_types * d).reshape(n_types, d, 1)
-            gammas = np.ones((n_types, d, 1)) * 4
+            gammas = np.ones((n_types, d, 1)) * 8
         #            gammas = np.random.uniform(1.0, 2.0, size=n_types * d).reshape(
         else:
             etas = types["etas"]
@@ -205,10 +206,60 @@ class AgentDistribution:
             self.quantile_best_response(beta, s, sigma, q) for s in thresholds
         ]
 
+
         plt.plot(thresholds, quantile_br)
         plt.xlabel("Thresholds")
         plt.ylabel("Quantile BR")
         plt.title("Quantile BR vs. Threshold")
+        
+    def quantile_mapping_vary_s(self, beta, sigma, q):
+        """This method returns the quantile mapping function q(beta, s). 
+        
+        Keyword arguments:
+        beta -- model parameters (Nx1)
+        sigma -- standard deviation of noise distribution(float)
+        q -- quantile between 0 and 1 (float)
+        """
+        bounds = compute_score_bounds(beta)
+        thresholds = np.linspace(bounds[0], bounds[1], 50)
+        quantile_map = []
+        
+        for s in tqdm.tqdm(thresholds):
+            cdf_vals = []
+            for r in thresholds:
+                cdf_vals.append(self.best_response_cdf(beta, s, sigma, r))
+            inverse_cdf_s = interp1d(cdf_vals, thresholds, kind="linear") 
+            quantile_map.append(inverse_cdf_s(q))
+        q = interp1d(thresholds, quantile_map)
+        return q
+    
+    def quantile_mapping_vary_beta(self, s, sigma, q):
+        """This method returns the quantile mapping function q(beta, s). 
+        
+        Keyword arguments:
+        s -- threshold (float)
+        sigma -- standard deviation of noise distribution(float)
+        q -- quantile between 0 and 1 (float)
+        """
+        thetas = np.linspace(-np.pi, np.pi, 50)
+        quantile_map = []
+        valid_theta = []
+        for theta in tqdm.tqdm(thetas):
+            cdf_vals = []
+            beta = np.array([np.cos(theta), np.sin(theta)]).reshape(2, 1)
+            bounds = compute_score_bounds(beta)
+            score_range = np.linspace(bounds[0], bounds[1], 50)
+            if s >= bounds[0] and s <= bounds[1]:
+                for r in score_range:
+                    cdf_vals.append(self.best_response_cdf(beta, s, sigma, r))
+                inverse_cdf_theta = interp1d(cdf_vals, score_range, kind="linear")
+                plt.plot(cdf_vals, score_range)
+                plt.xlabel("q")
+                plt.ylabel("F^-1(q)")
+                quantile_map.append(inverse_cdf_theta(q))
+                valid_theta.append(theta)
+        q = interp1d(valid_theta, quantile_map, kind="linear")
+        return q, valid_theta
 
     def quantile_fixed_point_true_distribution(self, beta, sigma, q, plot=False):
         bounds = compute_score_bounds(beta)
@@ -244,18 +295,44 @@ class AgentDistribution:
 
         return f(q)
 
-    def best_response_pdf(self, beta, s, sigma):
+    def best_response_pdf(self, beta, s, sigma, r):
+        bounds = compute_score_bounds(beta)
+        if s < bounds[0]:
+            return 0.
+        if s > bounds[1]:
+            return 0.
+
         pdf_val = 0.0
+
         for i, agent in enumerate(self.agents):
             pdf_val += (
                 norm.pdf(
-                    s - np.matmul(beta.T, agent.best_response(beta, s, sigma)),
+                    r - np.matmul(beta.T, agent.best_response(beta, s, sigma)),
                     loc=0.0,
                     scale=sigma,
                 )
                 * self.prop[i]
             )
         return pdf_val.item()
+
+    def best_response_cdf(self, beta, s, sigma, r):
+        bounds = compute_score_bounds(beta)
+        if s < bounds[0]:
+            return 0.
+        if s > bounds[1]:
+            return 1.
+
+        cdf_val = 0.0
+        for i, agent in enumerate(self.agents):
+             cdf_val += (
+                norm.cdf(
+                    r - np.matmul(beta.T, agent.best_response(beta, s, sigma)),
+                    loc=0.0,
+                    scale=sigma,
+                )
+                * self.prop[i]
+            )
+        return cdf_val.item()
 
     def quantile_fixed_point_naive(self, beta, sigma, q, plot=False):
         bounds = compute_score_bounds(beta)

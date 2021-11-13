@@ -5,6 +5,70 @@ import tqdm
 
 from utils import compute_score_bounds
 
+def expected_gradient_pi_theta(agent_dist, theta, sigma, r, f):
+    dim = agent_dist.d
+    assert dim==2, "Method does not work for dimension {}".format(dim)
+
+    beta = np.array([np.cos(theta), np.sin(theta)]).reshape(2, 1)
+    s = f(theta)
+    
+    br_dist, jacobian_dist = agent_dist.br_gradient_beta_distribution(beta, s, sigma)
+
+    z = r - np.array([np.matmul(beta.T, x) for x in  br_dist]).reshape(len(br_dist), 1)
+    prob = norm.pdf(z, loc=0., scale=sigma)
+    vec = np.array([np.matmul(beta.T, jacobian_dist[i]) + br_dist[i].T for i in range(len(br_dist))]).reshape(len(agent_dist.agents), len(beta))
+    dbeta_dtheta = np.array([-np.sin(theta), np.cos(theta)]).reshape(2, 1)
+    vec_chain = np.array([np.matmul(x.T, dbeta_dtheta).item() for x in vec]).reshape(2, 1)
+    res = -prob * vec_chain * agent_dist.prop.reshape(len(agent_dist.prop), 1)
+    grad_pi_theta = np.sum(res, axis=0)
+
+    return grad_pi_theta
+
+def empirical_gradient_pi_theta(agent_dist, beta, s, sigma, r, perturbation_size=0.1):
+    """Method that returns the empirical gradient of pi wrt to beta incurred given an agent distribution and model and threshold.
+    Assumes that there is an model true_beta when applied to the agents' hidden eta features
+    optimally selects the top agents.
+
+    Keyword args:
+    agent_dist -- AgentDistribution
+    beta -- model parameters (N, 1) array
+    s -- threshold (float)
+    sigma -- standard deviation of the noise (float)
+
+    Returns:
+    gamma_pi_beta - gradient of pi at beta
+    """
+    perturbations = (2 * bernoulli.rvs(p=0.5, size=agent_dist.n * (agent_dist.d-1)).reshape(agent_dist.n, agent_dist.d-1, 1) -1 ) * perturbation_size
+    scores = []
+    
+    bounds = compute_score_bounds(beta)
+     
+    interpolators = []
+    for agent in agent_dist.agents:
+        f = agent.br_score_function_beta(s, sigma)
+        interpolators.append(f)
+
+    for i in range(agent_dist.n):
+        theta_perturbed = theta + perturbations[i]
+        if theta_perturbed < -np.pi:
+            theta_perturbed += 2 * np.pi
+        if theta_perturbed > np.pi:
+            theta_perturbed -= 2 * np.pi
+        agent_type = agent_dist.n_agent_types[i]
+        br_score = interpolators[agent_type](theta_perturbed)
+        scores.append(br_score.item())
+
+    scores = np.array(scores).reshape(agent_dist.n, 1)
+    noise = norm.rvs(loc=0., scale=sigma, size=agent_dist.n).reshape(agent_dist.n, 1)
+    noisy_scores = np.clip(scores + noise, a_min=bounds[0], a_max=bounds[1])
+    indicators = noisy_scores <= r
+    
+    perturbations = perturbations.reshape(agent_dist.n, agent_dist.d-1)
+    Q = np.matmul(perturbations.T, perturbations)
+    gamma_pi_theta = np.linalg.solve(Q, np.matmul(perturbations.T, indicators))
+    return gamma_pi_theta
+
+
 def expected_gradient_loss_theta(agent_dist, theta, sigma, f, true_beta=None):
     """Method computes partial L(theta)/partial theta.
 
@@ -33,9 +97,9 @@ def expected_gradient_loss_theta(agent_dist, theta, sigma, f, true_beta=None):
     br_dist, jacobian_dist = agent_dist.br_gradient_beta_distribution(beta, s, sigma)
     z = s - np.array([np.matmul(beta.T, x) for x in  br_dist]).reshape(len(br_dist), 1)
     prob = norm.pdf(z, loc=0., scale=sigma)
-    dg_dtheta = np.array([-np.sin(theta), np.cos(theta)]).reshape(2, 1)
+    dbeta_dtheta = np.array([-np.sin(theta), np.cos(theta)]).reshape(2, 1)
     vec = np.array([np.matmul(beta.T, jacobian_dist[i]) + br_dist[i].T for i in range(len(br_dist))]).reshape(len(agent_dist.agents), 1, len(beta))
-    final_scalar = np.array([np.matmul(v, dg_dtheta ).item() for v in vec]).reshape(len(agent_dist.agents), 1)
+    final_scalar = np.array([np.matmul(v, dbeta_dtheta ).item() for v in vec]).reshape(len(agent_dist.agents), 1)
     res = prob * final_scalar * true_scores * agent_dist.prop.reshape(len(agent_dist.prop), 1)
     d_l_d_theta = np.sum(res, axis=0)
     return d_l_d_theta

@@ -27,6 +27,8 @@ class Agent:
         s -- threshold (float)
         sigma -- standard deviation of the noise distribution (float)
         """
+        bounds = compute_score_bounds(beta)
+        assert s >= bounds[0] and s <= bounds[1], "cannot compute best response for s out of score bounds"
         try:
             val = newton(
                 Agent._func_derivative_utility(beta, s, self.eta, self.gamma, sigma),
@@ -40,8 +42,8 @@ class Agent:
                     self.eta, self.gamma, beta, s, sigma
                 )
             )
-        val = np.clip(val, a_min=-1.0, a_max=1.0)
-        return val
+        val = np.clip(val, a_min=0., a_max=1.0)
+        return val.reshape(beta.shape)
 
     def plot_best_response_score(self, beta, sigma):
         bounds = compute_score_bounds(beta)
@@ -89,14 +91,16 @@ class Agent:
     def br_score_function_beta(self, s, sigma):
         thetas = np.linspace(-np.pi, np.pi, 100)
         br = []
+        valid_theta = []
         for theta in thetas:
             beta = np.array([np.cos(theta), np.sin(theta)]).reshape(2, 1)
             bounds = compute_score_bounds(beta)
-            s_clip = np.clip(s, bounds[0], bounds[1])
-            br.append(np.matmul(beta.T, self.best_response(beta, s_clip, sigma)).item())
+            if s >= bounds[0] and s <= bounds[1]:
+                br.append(np.matmul(beta.T, self.best_response(beta, s, sigma)).item())
+                valid_theta.append(theta)
 
-        f = interp1d(thetas, br)
-        return f
+        f = interp1d(valid_theta, br)
+        return f, valid_theta
 
     def br_gradient_beta(self, beta, s, sigma):
         """
@@ -111,14 +115,7 @@ class Agent:
         best_response -- (D, 1) array
         jacobian -- (D, D) matrix
         """
-        G = np.diag(self.gamma.flatten())
-        best_response = self.best_response(beta, s, sigma)
-        arg = s - np.matmul(beta.T, best_response)
-        prob = norm.pdf(arg, loc=0, scale=sigma)
-        prob_prime = -(arg / (sigma ** 2)) * norm.pdf(arg, loc=0, scale=sigma)
-        rank_one_mat = np.matmul(beta, beta.T)
-        jacobian = np.transpose(prob * np.linalg.inv(2 * G + prob_prime * rank_one_mat))
-        return best_response, jacobian
+        pass
 
     def br_gradient_s(self, beta, s, sigma):
         """
@@ -133,7 +130,8 @@ class Agent:
         best_response -- (D, 1) array
         deriv_s -- (D, 1) array
         """
-
+        bounds = compute_score_bounds(beta)
+        assert s >= bounds[0] and s <= bounds[1]
         G = np.diag(self.gamma.flatten())
         best_response = self.best_response(beta, s, sigma)
         arg = s - np.matmul(beta.T, best_response)
@@ -144,6 +142,22 @@ class Agent:
         )
         return best_response, deriv_s
 
+    def br_gradient_theta(self, theta, s, sigma):
+
+        beta = np.array([np.cos(theta), np.sin(theta)]).reshape(2, 1)
+        bounds = compute_score_bounds(beta)
+        assert s >= bounds[0] and s <= bounds[1]
+        best_response = self.best_response(beta, s, sigma)
+        arg = s - np.matmul(beta.T, best_response)
+        prob = norm.pdf(arg, loc=0, scale=sigma)
+        prob_prime = -(arg / (sigma ** 2)) * norm.pdf(arg, loc=0, scale=sigma)
+        rank_one_mat = np.matmul(beta, beta.T)
+        dbeta_dtheta = np.array([-np.sin(theta), np.cos(theta)]).reshape(2, 1)
+        G = np.diag(self.gamma.flatten())
+        first = 2 * G + prob_prime * rank_one_mat
+        inv_mat = np.linalg.inv(first)
+        second = - (prob_prime * np.matmul(best_response.T, dbeta_dtheta)).item() * beta + prob_prime * dbeta_dtheta
+        return best_response, np.matmul(inv_mat, second)
 
 if __name__ == "__main__":
     eta = np.array([0.5, 0.5]).reshape(2, 1)
