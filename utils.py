@@ -78,7 +78,6 @@ def fixed_point_interpolation_true_distribution(
 
     thetas = np.linspace(-np.pi, np.pi, 50)
     fixed_points = []
-    betas = []
 
     # compute beta and fixed point for each theta
     print("Computing fixed points...")
@@ -88,9 +87,8 @@ def fixed_point_interpolation_true_distribution(
             beta, sigma, q, plot=False
         )
         fixed_points.append(fp)
-        betas.append(beta)
 
-    f = interp1d(thetas, fixed_points, kind="cubic")
+    f = interp1d(thetas, fixed_points, kind="linear")
 
     if plot:
         plt.plot(thetas, fixed_points, label="actual")
