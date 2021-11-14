@@ -1,16 +1,16 @@
 import numpy as np
 from scipy.stats import norm, bernoulli
-from utils import compute_score_bounds
+from utils import compute_score_bounds, convert_to_unit_vector
 import tqdm
 import matplotlib.pyplot as plt
 
 
-def empirical_gradient_pi_s(agent_dist, beta, s, sigma, r, perturbation_size=0.05):
+def empirical_gradient_pi_s(agent_dist, theta, s, sigma, r, perturbation_size=0.05):
     """Method that returns the empirical gradient of pi wrt to s incurred given an agent distribution and model and threshold.
 
     Keyword args:
     agent_dist -- AgentDistribution
-    beta -- model parameters (N, 1) array
+    theta -- model parameters (D-1, 1) array
     s -- threshold (float)
     sigma -- standard deviation of noise distribution (float)
     r -- value that CDF should be evaluated at
@@ -18,7 +18,7 @@ def empirical_gradient_pi_s(agent_dist, beta, s, sigma, r, perturbation_size=0.0
     Returns:
     gamma_loss_s -- empirical gradient dL/ds
     """
-        
+    beta = convert_to_unit_vector(theta)  
     perturbations = (2 * bernoulli.rvs(p=0.5, size=agent_dist.n).reshape(agent_dist.n, 1) -1 ) * perturbation_size
     scores = []
     
@@ -44,12 +44,12 @@ def empirical_gradient_pi_s(agent_dist, beta, s, sigma, r, perturbation_size=0.0
     gamma_pi_s = np.linalg.solve(Q, np.matmul(perturbations.T, indicators))
     return gamma_pi_s.item()
 
-def expected_gradient_pi_s(agent_dist, theta, sigma, r, f):
+def expected_gradient_pi_s(agent_dist, theta, s, sigma, r):
     """Method computes partial pi/partial s.
 
     Keyword args:
     agent_dist -- AgentDistribution
-    beta -- model parameters
+    theta -- model parameters
     sigma -- standard deviation of noise distribution
     f -- function that maps arctan(beta[1]/beta[0]) -> s_beta (fixed point)
 
@@ -60,9 +60,8 @@ def expected_gradient_pi_s(agent_dist, theta, sigma, r, f):
     dim = agent_dist.d
     assert dim==2, "Method does not work for dimension {}".format(dim)
 
-    beta = np.array([np.cos(theta), np.sin(theta)]).reshape(2, 1)
+    beta = convert_to_unit_vector(theta)
     bounds = compute_score_bounds(beta)
-    s = f(theta)
     br_dist, grad_s_dist  = agent_dist.br_gradient_s_distribution(beta, s, sigma)
     
     z = r - np.array([np.matmul(beta.T, x) for x in  br_dist]).reshape(len(br_dist), 1)
@@ -79,13 +78,13 @@ def plot_grad_pi_s(agent_dist, sigma, f, savefig=None):
     grad_s = []
     sigma = 0.35
     theta = np.pi/4
-    beta = np.array([np.cos(theta), np.sin(theta)]).reshape(2, 1)
+    beta = convert_to_unit_vector(theta)
     s_beta = f(theta)
     bounds = compute_score_bounds(beta)
     rs = np.linspace(bounds[0], bounds[1], 50)
     for r in rs:
         emp_grad = empirical_gradient_pi_s(agent_dist, beta, s_beta, sigma, r)
-        grad = expected_gradient_pi_s(agent_dist, theta, sigma, r, f)
+        grad = expected_gradient_pi_s(agent_dist, theta, s_beta, sigma, r)
         emp_grad_s.append(emp_grad)
         grad_s.append(grad)
     plt.plot(rs, emp_grad_s, label="empirical")
@@ -105,16 +104,16 @@ def plot_grad_pi_beta(agent_dist, sigma, f, savefig=None):
     emp_grad_betas_0 = []
     emp_grad_betas_1 = []
     theta = np.pi/4
-    beta = np.array([np.cos(theta), np.sin(theta)]).reshape(2, 1)
+    beta = convert_to_unit_vector(theta)
     sigma = 0.35
     s_beta = f(theta)
     bounds = compute_score_bounds(beta)
     rs = np.linspace(bounds[0], bounds[1], 50)
     for r in rs:
-        grad_beta = expected_gradient_pi_beta(agent_dist, theta, sigma, r, f)
+        grad_beta = expected_gradient_pi_beta(agent_dist, theta, s_beta, sigma, r)
         grad_betas_0.append(grad_beta[0])
         grad_betas_1.append(grad_beta[1])
-        emp_grad_beta = empirical_gradient_pi_beta(agent_dist, beta, f(theta), sigma, r)
+        emp_grad_beta = empirical_gradient_pi_beta(agent_dist, theta, s_beta, sigma, r)
         emp_grad_betas_0.append(emp_grad_beta[0])
         emp_grad_betas_1.append(emp_grad_beta[1])
     
@@ -135,13 +134,11 @@ def plot_grad_pi_beta(agent_dist, sigma, f, savefig=None):
     plt.show()
     plt.close()
 
-def expected_gradient_pi_beta(agent_dist, theta, sigma, r, f):
+def expected_gradient_pi_beta(agent_dist, theta, s, sigma, r):
     dim = agent_dist.d
     assert dim==2, "Method does not work for dimension {}".format(dim)
 
-    beta = np.array([np.cos(theta), np.sin(theta)]).reshape(2, 1)
-    s = f(theta)
-    
+    beta = convert_to_unit_vector(theta) 
     br_dist, jacobian_dist = agent_dist.br_gradient_beta_distribution(beta, s, sigma)
 
     z = r - np.array([np.matmul(beta.T, x) for x in  br_dist]).reshape(len(br_dist), 1)
@@ -152,12 +149,12 @@ def expected_gradient_pi_beta(agent_dist, theta, sigma, r, f):
 
     return grad_pi_beta
 
-def empirical_gradient_pi_beta(agent_dist, beta, s, sigma, r, perturbation_size=0.1):
+def empirical_gradient_pi_beta(agent_dist, theta, s, sigma, r, perturbation_size=0.1):
     """Method that returns the empirical gradient of pi wrt to beta incurred given an agent distribution and model and threshold.
 
     Keyword args:
     agent_dist -- AgentDistribution
-    beta -- model parameters (N, 1) array
+    theta  -- model parameters (D-1, 1) array
     s -- threshold (float)
     sigma -- standard deviation of the noise (float)
 
@@ -166,7 +163,8 @@ def empirical_gradient_pi_beta(agent_dist, beta, s, sigma, r, perturbation_size=
     """
     perturbations = (2 * bernoulli.rvs(p=0.5, size=agent_dist.n * agent_dist.d).reshape(agent_dist.n, agent_dist.d, 1) -1 ) * perturbation_size
     scores = []
-    
+
+    beta = convert_to_unit_vector(theta)
     bounds = compute_score_bounds(beta)
     
     for i in range(agent_dist.n):
@@ -186,7 +184,7 @@ def empirical_gradient_pi_beta(agent_dist, beta, s, sigma, r, perturbation_size=
     gamma_pi_beta = np.linalg.solve(Q, np.matmul(perturbations.T, indicators))
     return gamma_pi_beta
 
-def expected_gradient_loss_beta(agent_dist, theta, sigma, f, true_beta=None):
+def expected_gradient_loss_beta(agent_dist, theta, s, sigma, true_beta=None):
     """Method computes partial L(beta)/partial beta.
 
     Keyword args:
@@ -204,12 +202,11 @@ def expected_gradient_loss_beta(agent_dist, theta, sigma, f, true_beta=None):
     dim = agent_dist.d
     assert dim==2, "Method does not work for dimension {}".format(dim)
 
-    beta = np.array([np.cos(theta), np.sin(theta)]).reshape(2, 1)
+    beta = convert_to_unit_vector(theta)
     if true_beta is None:
         true_beta = np.zeros(beta.shape)
         true_beta[0] = 1.
     bounds = compute_score_bounds(beta)
-    s = np.clip(f(theta), a_min=bounds[0], a_max = bounds[1])
     true_scores = np.array([-np.matmul(true_beta.T, agent.eta).item() for agent in agent_dist.agents]).reshape(len(agent_dist.agents), 1)
     br_dist, jacobian_dist = agent_dist.br_gradient_beta_distribution(beta, s, sigma)
     z = s - np.array([np.matmul(beta.T, x) for x in  br_dist]).reshape(len(br_dist), 1)
@@ -221,18 +218,18 @@ def expected_gradient_loss_beta(agent_dist, theta, sigma, f, true_beta=None):
     d_l_d_beta = np.sum(res, axis=0)
     return d_l_d_beta
 
-def empirical_gradient_loss_beta(agent_dist, beta, s, sigma, q, true_beta=None, perturbation_size=0.1):
+def empirical_gradient_loss_beta(agent_dist, theta, s, sigma, q, true_beta=None, perturbation_size=0.1):
     """Method that returns the empirical gradient of loss wrt to beta incurred given an agent distribution and model and threshold.
     Assumes that there is an model true_beta when applied to the agents' hidden eta features
     optimally selects the top agents.
 
     Keyword args:
     agent_dist -- AgentDistribution
-    beta -- model parameters (N, 1) array
+    theta -- model parameters (D-1, 1) array
     s -- threshold (float)
     q -- quantile
     sigma -- standard deviation of the noise (float)
-    true_beta -- (N, 1) array
+    true_beta -- (D, 1) array
 
     Returns:
     loss -- empirical policy loss
@@ -244,6 +241,7 @@ def empirical_gradient_loss_beta(agent_dist, beta, s, sigma, q, true_beta=None, 
     perturbations = (2 * bernoulli.rvs(p=0.5, size=agent_dist.n * agent_dist.d).reshape(agent_dist.n, agent_dist.d, 1) -1 ) * perturbation_size
     scores = []
     
+    beta = convert_to_unit_vector(theta)
     bounds = compute_score_bounds(beta)
     
     for i in range(agent_dist.n):
@@ -265,7 +263,7 @@ def empirical_gradient_loss_beta(agent_dist, beta, s, sigma, q, true_beta=None, 
     gamma_loss_beta = np.linalg.solve(Q, np.matmul(perturbations.T, loss_vector))
     return gamma_loss_beta
 
-def expected_gradient_loss_s(agent_dist, theta, sigma, f, true_beta=None):
+def expected_gradient_loss_s(agent_dist, theta, s, sigma, true_beta=None):
     """Method computes partial L(beta)/partial s.
 
     Keyword args:
@@ -283,7 +281,7 @@ def expected_gradient_loss_s(agent_dist, theta, sigma, f, true_beta=None):
     dim = agent_dist.d
     assert dim==2, "Method does not work for dimension {}".format(dim)
 
-    beta = np.array([np.cos(theta), np.sin(theta)]).reshape(2, 1)
+    beta = convert_to_unit_vector(theta)
     if true_beta is None:
         true_beta = np.zeros(beta.shape)
         true_beta[0] = 1.
@@ -299,7 +297,7 @@ def expected_gradient_loss_s(agent_dist, theta, sigma, f, true_beta=None):
     d_l_d_s = np.sum(res)
     return d_l_d_s.item()
 
-def empirical_gradient_loss_s(agent_dist, beta, s, sigma, q, true_beta=None, perturbation_size=0.05):
+def empirical_gradient_loss_s(agent_dist, theta, s, sigma, q, true_beta=None, perturbation_size=0.05):
     """Method that returns the empirical gradient of loss wrt to s incurred given an agent distribution and model and threshold.
     Assumes that there is an model true_beta when applied to the agents' hidden eta features
     optimally selects the top agents.
@@ -315,6 +313,7 @@ def empirical_gradient_loss_s(agent_dist, beta, s, sigma, q, true_beta=None, per
     Returns:
     gamma_loss_s -- empirical gradient dL/ds
     """
+    beta = convert_to_unit_vector(theta)
     if true_beta is None:
         true_beta = np.zeros(beta.shape)
         true_beta[0] = 1.
@@ -355,13 +354,12 @@ def plot_grad_loss_beta(agent_dist, sigma, q, f, true_beta=None, savefig=None):
     emp_grad_beta2 = []
     thetas = np.linspace(-np.pi, np.pi, 50)
     for theta in tqdm.tqdm(thetas):
-        vec_beta = expected_gradient_loss_beta(agent_dist, theta, sigma, f, true_beta)
+        s_beta = f(theta)
+        vec_beta = expected_gradient_loss_beta(agent_dist, theta, s_beta, sigma, true_beta)
         grad_beta1.append(vec_beta[0].item())
         grad_beta2.append(vec_beta[1].item())
         
-        s_beta = f(theta)
-        beta = np.array([np.cos(theta), np.sin(theta)]).reshape(2, 1)
-        emp_vec_beta = empirical_gradient_loss_beta(agent_dist, beta, s_beta, sigma, q, true_beta)
+        emp_vec_beta = empirical_gradient_loss_beta(agent_dist, theta, s_beta, sigma, q, true_beta)
         emp_grad_beta1.append(emp_vec_beta[0].item())
         emp_grad_beta2.append(emp_vec_beta[1].item())
 
@@ -390,9 +388,9 @@ def plot_grad_loss_s(agent_dist, sigma, q, f, true_beta=None, savefig=None):
     emp_grad_s = []
     thetas = np.linspace(-np.pi, np.pi, 50)
     for theta in thetas:
-        d_l_d_s = expected_gradient_loss_s(agent_dist, theta, sigma, f, true_beta)
-        beta = np.array([np.cos(theta), np.sin(theta)]).reshape(2, 1)
-        emp_grad = empirical_gradient_loss_s(agent_dist, beta, f(theta), sigma, q, true_beta)
+        s_beta = f(theta)
+        d_l_d_s = expected_gradient_loss_s(agent_dist, theta, s_beta, sigma, true_beta)
+        emp_grad = empirical_gradient_loss_s(agent_dist, theta, s_beta, sigma, q, true_beta)
         emp_grad_s.append(emp_grad)
         grad_s.append(d_l_d_s)
     plt.plot(thetas, grad_s, label="expected")

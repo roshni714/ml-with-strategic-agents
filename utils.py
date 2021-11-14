@@ -2,6 +2,33 @@ import numpy as np
 import tqdm
 from scipy.interpolate import interp1d
 
+def convert_to_polar_coordinates(beta):
+    """Method that converts a D-dimensional unit vector to polar coordinates (D-1 - dimensional.)
+
+    Keyword args:
+    beta -- (D, 1) dimensional unit vector
+
+    Returns:
+    theta -- (D-1, 1) vector of angles
+    """
+    assert beta.shape[0] == 2, "Method only works for 2 dimensions now"
+
+    theta = np.arctan2(beta[1], beta[0])
+    return theta
+
+def convert_to_unit_vector(theta):
+    """Method that converts a polar coordinates to Euclidean unit vector.
+
+    Keyword args:
+    theta -- (D-1, 1) vector of angles
+
+    Returns:
+    beta -- (D, 1)  unit vector
+    """
+    assert type(theta) == float, "Method only works for float theta now"
+
+    beta = np.array([np.cos(theta), np.sin(theta)]).reshape(2, 1)
+    return beta
 
 def compute_continuity_noise(agent_dist):
     """Method that returns the standard deviation of the noise distribution for ensuring continuity.
