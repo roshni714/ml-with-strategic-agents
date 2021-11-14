@@ -85,7 +85,7 @@ class Agent:
             for s in thresholds
         ]
 
-        f = interp1d(thresholds, br)
+        f = interp1d(thresholds, br, kind="linear")
         return f
 
     def br_score_function_beta(self, s, sigma):
@@ -99,7 +99,7 @@ class Agent:
                 br.append(np.matmul(beta.T, self.best_response(beta, s, sigma)).item())
                 valid_theta.append(theta)
 
-        f = interp1d(valid_theta, br)
+        f = interp1d(valid_theta, br, kind="linear")
         return f, valid_theta
 
     def br_gradient_beta(self, beta, s, sigma):
