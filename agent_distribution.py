@@ -117,6 +117,27 @@ class AgentDistribution:
             jac.append(j)
             br.append(b)
         return br, jac
+    
+    def br_gradient_theta_distribution(self, theta, s, sigma):
+        """This is a method that returns the best response of each agent type to a model and threshold and the gradient wrt to theta.
+        
+        Keyword arguments:
+        theta -- model parameters
+        s -- threshold
+        sigma -- standard deviation of noise distribution
+        
+        Returns
+        br -- a list of np.arrays of dimension (D, 1)
+        grad -- a list of np.arrays of dimension (D, 1)
+        """
+        br = []
+        grad = []
+        for agent in self.agents:
+            b, j = agent.br_gradient_theta(theta, s, sigma)
+            grad.append(j)
+            br.append(b)
+        return br, grad
+
 
     def br_gradient_s_distribution(self, beta, s, sigma):
         """This is a method that returns the best response of each agent type to a model and threshold and the derivative wrt to s.
