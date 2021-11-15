@@ -25,7 +25,7 @@ def convert_to_unit_vector(theta):
     Returns:
     beta -- (D, 1)  unit vector
     """
-    assert type(theta) == float, "Method only works for float theta now"
+    assert isinstance(theta, float), "Method only works for float theta now"
 
     beta = np.array([np.cos(theta), np.sin(theta)]).reshape(2, 1)
     return beta
