@@ -157,7 +157,8 @@ class Agent:
         first = 2 * G + prob_prime * rank_one_mat
         inv_mat = np.linalg.inv(first)
         second = - (prob_prime * np.matmul(best_response.T, dbeta_dtheta)).item() * beta + prob_prime * dbeta_dtheta
-        return best_response, np.matmul(inv_mat, second)
+        grad_theta = np.matmul(inv_mat, second)
+        return best_response, grad_theta
 
 if __name__ == "__main__":
     eta = np.array([0.5, 0.5]).reshape(2, 1)
