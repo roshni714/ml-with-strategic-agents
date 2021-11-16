@@ -452,9 +452,6 @@ class AgentDistribution:
         self.n_agent_types = np.random.choice(
             list(range(self.n_types)), self.n, p=self.prop
         )
-        # reset etas and gammas
-        _ = self.get_etas()
-        _ = self.get_gammas()
 
 
 if __name__ == "__main__":
