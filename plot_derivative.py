@@ -9,7 +9,7 @@ from reparametrized_gradient import expected_total_derivative
 from expected_gradient import ExpectedGradient
 
 
-def plot_derivative(
+def plot(
     agent_dist,
     sigma,
     q,
@@ -24,7 +24,7 @@ def plot_derivative(
     thetas = np.linspace(-np.pi, np.pi, 50)
     for theta in thetas:
         s = f(theta)
-        grap_exp = ExpectedGradient(agent_dist, theta, s, sigma, true_beta)
+        grad_exp = ExpectedGradient(agent_dist, theta, s, sigma, true_beta)
         val = grad_exp.compute_total_derivative()
         grad_est = GradientEstimator(
             agent_dist,
@@ -38,22 +38,31 @@ def plot_derivative(
         )
         hat_val = grad_est.compute_total_derivative()
 
-        deriv.append(val)
-        deriv_emp.append(hat_val)
+        derivs_exp_all.append(val)
+        derivs_emp_all.append(hat_val)
 
     fig, ax = plt.subplots(
-        1, len(derivatives_to_plot), figsize=(12 / 5) * len(derivatives_to_plot)
+        1, len(derivatives_to_plot), figsize=(5, (12 / 5) * len(derivatives_to_plot))
     )
+    
+    if len(derivatives_to_plot) > 1:
+        for i in range(len(derivatives_to_plot)):
+            deriv_emp = [dic[derivatives_to_plot[i]] for dic in derivs_emp_all]
+            deriv_exp = [dic[derivatives_to_plot[i]] for dic in derivs_exp_all]
 
-    for i in range(len(derivatives_to_plot)):
+            ax[i].plot(thetas, deriv_emp, label="empirical")
+            ax[i].plot(thetas, deriv_exp, label="expectation")
+            ax[i].set_xlabel("theta")
+            ax[i].set_ylabel(derivatives_to_plot[i])
+            ax[i].set_title("theta vs. {}".format(derivatives_to_plot[i]))
+    else:
         deriv_emp = [dic[derivatives_to_plot[i]] for dic in derivs_emp_all]
         deriv_exp = [dic[derivatives_to_plot[i]] for dic in derivs_exp_all]
 
-        ax[i].plot(thetas, deriv_emp, label="empirical")
-        ax[i].plot(thetas, deriv_exp, label="expectation")
-        ax[i].set_xlabel("theta")
-        ax[i].set_ylabel(derivatives_to_plot[i])
-        ax[i].set_title("theta vs. {}".format(derivatives_to_plot[i]))
+        plt.plot(thetas, deriv_emp, label="empirical")
+        plt.plot(thetas, deriv_exp, label="expectation")
+        plt.xlabel("theta")
+        plt.ylabel(derivatives_to_plot[i])
     if savefig is not None:
         title = savefig.split("/")[-1]
         plt.suptitle(title)
@@ -61,23 +70,19 @@ def plot_derivative(
     plt.show()
     plt.close()
 
-
 @argh.arg("--n", default=100000)
 @argh.arg("--perturbation_s", default=0.1)
 @argh.arg("--perturbation_theta", default=0.1)
-@argh.arg("--save", default="results")
-@argh.arg("--total_derivative", default=True)
-@argh.arg("--partial_deriv_loss_theta", default=True)
-@argh.arg("--partial_deriv_pi_theta", default=True)
-@argh.arg("--partial_deriv_pi_s", default=True)
-@argh.arg("--partial_deriv_loss_s", default=True)
-@argh.arg("--partial_deriv_s_theta", default=True)
+@argh.arg("--total_deriv", default=False)
+@argh.arg("--partial_deriv_loss_theta", default=False)
+@argh.arg("--partial_deriv_pi_theta", default=False)
+@argh.arg("--partial_deriv_pi_s", default=False)
+@argh.arg("--partial_deriv_loss_s", default=False)
+@argh.arg("--partial_deriv_s_theta", default=False)
 def main(
     n=100000,
     perturbation_s=0.1,
     perturbation_theta=0.1,
-    learning_rate=1.0,
-    max_iter=500,
     save="results",
     total_deriv=True,
     partial_deriv_loss_theta=True,
@@ -88,19 +93,17 @@ def main(
 ):
     np.random.seed(0)
 
-    n_types = 20
+    n_types = 1
     d = 2
     etas = np.random.uniform(0.3, 0.8, n_types * d).reshape(n_types, d, 1)
     gammas = np.random.uniform(5.0, 8.0, n_types * d).reshape(n_types, d, 1)
     dic = {"etas": etas, "gammas": gammas}
     agent_dist = AgentDistribution(n=n, d=d, n_types=n_types, types=dic, prop=None)
     #    sigma = compute_continuity_noise(agent_dist)
-    if true_beta is None:
-        true_beta = np.zeros((agent_dist.d, 1))
-        true_beta[0] = 1.0
+    true_beta = np.array([1., 0.]).reshape(2, 1)
 
     derivatives_to_plot = []
-    if total_derivative:
+    if total_deriv:
         derivatives_to_plot.append("total_deriv")
     if partial_deriv_loss_theta:
         derivatives_to_plot.append("partial_deriv_loss_theta")
@@ -116,7 +119,6 @@ def main(
     f = fixed_point_interpolation_true_distribution(
         agent_dist, sigma, q, plot=False, savefig=None
     )
-    true_beta = np.array([1.0, 0.0]).reshape(2, 1)
     plot(
         agent_dist,
         sigma,
