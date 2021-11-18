@@ -143,7 +143,7 @@ class GradientEstimator:
         density_estimate = self.compute_density(scores, cutoff)
 
         gamma_s_theta = -(1 / (density_estimate + gamma_pi_s)) * gamma_pi_theta
-        total_derivative = (gamma_loss_s * gamma_s_theta) + gamma_loss_theta
+        total_deriv = (gamma_loss_s * gamma_s_theta) + gamma_loss_theta
 
         dic = {
             "total_deriv": total_deriv,
@@ -153,5 +153,6 @@ class GradientEstimator:
             "partial_deriv_pi_theta": gamma_pi_theta,
             "partial_deriv_s_theta": gamma_s_theta,
             "density_estimate": density_estimate,
+            "losses": loss_vector.flatten()
         }
-        return dic, loss_vector.flatten()
+        return dic
