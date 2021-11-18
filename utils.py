@@ -2,6 +2,7 @@ import numpy as np
 import tqdm
 from scipy.interpolate import interp1d
 
+
 def convert_to_polar_coordinates(beta):
     """Method that converts a D-dimensional unit vector to polar coordinates (D-1 - dimensional.)
 
@@ -16,6 +17,7 @@ def convert_to_polar_coordinates(beta):
     theta = np.arctan2(beta[1], beta[0])
     return theta
 
+
 def convert_to_unit_vector(theta):
     """Method that converts a polar coordinates to Euclidean unit vector.
 
@@ -29,6 +31,7 @@ def convert_to_unit_vector(theta):
 
     beta = np.array([np.cos(theta), np.sin(theta)]).reshape(2, 1)
     return beta
+
 
 def compute_continuity_noise(agent_dist):
     """Method that returns the standard deviation of the noise distribution for ensuring continuity.
@@ -74,12 +77,14 @@ def compute_score_bounds(beta):
     scores = [np.matmul(beta.T, x.reshape(2, 1)).item() for x in x_box]
     return min(scores), max(scores)
 
+
 def spherical_coordinates(beta):
     assert beta.shape[0] == 2, "Method does not work for beta with dim {}".format(
         beta.shape[0]
     )
 
     return np.arctan2(beta[1], beta[0])
+
 
 def fixed_point_interpolation_true_distribution(
     agent_dist, sigma, q, plot=False, savefig=None
