@@ -28,7 +28,9 @@ class Agent:
         sigma -- standard deviation of the noise distribution (float)
         """
         bounds = compute_score_bounds(beta)
-        assert s >= bounds[0] and s <= bounds[1], "cannot compute best response for s out of score bounds"
+        assert (
+            s >= bounds[0] and s <= bounds[1]
+        ), "cannot compute best response for s out of score bounds"
         try:
             val = newton(
                 Agent._func_derivative_utility(beta, s, self.eta, self.gamma, sigma),
@@ -42,7 +44,7 @@ class Agent:
                     self.eta, self.gamma, beta, s, sigma
                 )
             )
-        val = np.clip(val, a_min=0., a_max=1.0)
+        val = np.clip(val, a_min=0.0, a_max=1.0)
         return val.reshape(beta.shape)
 
     def plot_best_response_score(self, beta, sigma):
@@ -156,9 +158,13 @@ class Agent:
         G = np.diag(self.gamma.flatten())
         first = 2 * G + prob_prime * rank_one_mat
         inv_mat = np.linalg.inv(first)
-        second = - (prob_prime * np.matmul(best_response.T, dbeta_dtheta)).item() * beta + prob_prime * dbeta_dtheta
+        second = (
+            -(prob_prime * np.matmul(best_response.T, dbeta_dtheta)).item() * beta
+            + prob_prime * dbeta_dtheta
+        )
         grad_theta = np.matmul(inv_mat, second)
         return best_response, grad_theta
+
 
 if __name__ == "__main__":
     eta = np.array([0.5, 0.5]).reshape(2, 1)

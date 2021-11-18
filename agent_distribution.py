@@ -117,7 +117,7 @@ class AgentDistribution:
             jac.append(j)
             br.append(b)
         return br, jac
-    
+
     def br_gradient_theta_distribution(self, theta, s, sigma):
         """This is a method that returns the best response of each agent type to a model and threshold and the gradient wrt to theta.
         
@@ -137,7 +137,6 @@ class AgentDistribution:
             grad.append(j)
             br.append(b)
         return br, grad
-
 
     def br_gradient_s_distribution(self, beta, s, sigma):
         """This is a method that returns the best response of each agent type to a model and threshold and the derivative wrt to s.
@@ -227,12 +226,11 @@ class AgentDistribution:
             self.quantile_best_response(beta, s, sigma, q) for s in thresholds
         ]
 
-
         plt.plot(thresholds, quantile_br)
         plt.xlabel("Thresholds")
         plt.ylabel("Quantile BR")
         plt.title("Quantile BR vs. Threshold")
-        
+
     def quantile_mapping_vary_s(self, beta, sigma, q):
         """This method returns the quantile mapping function q(beta, s). 
         
@@ -244,16 +242,16 @@ class AgentDistribution:
         bounds = compute_score_bounds(beta)
         thresholds = np.linspace(bounds[0], bounds[1], 50)
         quantile_map = []
-        
+
         for s in tqdm.tqdm(thresholds):
             cdf_vals = []
             for r in thresholds:
                 cdf_vals.append(self.best_response_cdf(beta, s, sigma, r))
-            inverse_cdf_s = interp1d(cdf_vals, thresholds, kind="linear") 
+            inverse_cdf_s = interp1d(cdf_vals, thresholds, kind="linear")
             quantile_map.append(inverse_cdf_s(q))
         q = interp1d(thresholds, quantile_map)
         return q
-    
+
     def quantile_mapping_vary_beta(self, s, sigma, q):
         """This method returns the quantile mapping function q(beta, s). 
         
@@ -319,9 +317,9 @@ class AgentDistribution:
     def best_response_pdf(self, beta, s, sigma, r):
         bounds = compute_score_bounds(beta)
         if s < bounds[0]:
-            return 0.
+            return 0.0
         if s > bounds[1]:
-            return 0.
+            return 0.0
 
         pdf_val = 0.0
 
@@ -339,13 +337,13 @@ class AgentDistribution:
     def best_response_cdf(self, beta, s, sigma, r):
         bounds = compute_score_bounds(beta)
         if s < bounds[0]:
-            return 0.
+            return 0.0
         if s > bounds[1]:
-            return 1.
+            return 1.0
 
         cdf_val = 0.0
         for i, agent in enumerate(self.agents):
-             cdf_val += (
+            cdf_val += (
                 norm.cdf(
                     r - np.matmul(beta.T, agent.best_response(beta, s, sigma)),
                     loc=0.0,
