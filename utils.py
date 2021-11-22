@@ -79,8 +79,9 @@ def compute_score_bounds(beta):
 
 
 def smooth_indicator(x):
-    v = 100.
-    return 1/ (1. + np.exp(-v * ( x + 1/ np.sqrt(v)))) 
+    v = 100.0
+    return 1 / (1.0 + np.exp(-v * (x + 1 / np.sqrt(v))))
+
 
 def spherical_coordinates(beta):
     assert beta.shape[0] == 2, "Method does not work for beta with dim {}".format(

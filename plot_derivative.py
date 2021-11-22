@@ -5,9 +5,14 @@ from scipy.misc import derivative
 
 from agent_distribution import AgentDistribution
 from gradient_estimation import GradientEstimator
-from utils import compute_continuity_noise, fixed_point_interpolation_true_distribution, compute_contraction_noise
+from utils import (
+    compute_continuity_noise,
+    fixed_point_interpolation_true_distribution,
+    compute_contraction_noise,
+)
 from reparametrized_gradient import expected_total_derivative
 from expected_gradient import ExpectedGradient
+
 
 def plot(
     agent_dist,
@@ -18,7 +23,7 @@ def plot(
     perturbation_s_size=0.1,
     perturbation_theta_size=0.1,
     true_beta=None,
-    savefig=None
+    savefig=None,
 ):
     derivs_exp_all = []
     derivs_emp_all = []
@@ -45,7 +50,7 @@ def plot(
     fig, ax = plt.subplots(
         1, len(derivatives_to_plot), figsize=(12 * len(derivatives_to_plot), 5)
     )
-    
+
     if len(derivatives_to_plot) > 1:
         for i in range(len(derivatives_to_plot)):
             deriv_emp = [dic[derivatives_to_plot[i]] for dic in derivs_emp_all]
@@ -59,8 +64,12 @@ def plot(
 
             if derivatives_to_plot[i] == "partial_deriv_s_theta":
                 dx = 0.01
-                trunc_thetas = np.linspace(thetas[0] + dx, thetas[-1] -dx, 50)
-                ax[i].plot(trunc_thetas, [derivative(f, theta, dx) for theta in trunc_thetas], label="numerical approx")
+                trunc_thetas = np.linspace(thetas[0] + dx, thetas[-1] - dx, 50)
+                ax[i].plot(
+                    trunc_thetas,
+                    [derivative(f, theta, dx) for theta in trunc_thetas],
+                    label="numerical approx",
+                )
             ax[i].legend()
 
     else:
@@ -73,8 +82,12 @@ def plot(
         plt.ylabel(derivatives_to_plot[i])
         if derivatives_to_plot[i] == "partial_deriv_s_theta":
             dx = 0.01
-            trunc_thetas = np.linspace(thetas[0] + dx, thetas[-1] -dx, 50)
-            plt.plot(trunc_thetas, [derivative(f, theta, dx) for theta in trunc_thetas], label="numerical approx")
+            trunc_thetas = np.linspace(thetas[0] + dx, thetas[-1] - dx, 50)
+            plt.plot(
+                trunc_thetas,
+                [derivative(f, theta, dx) for theta in trunc_thetas],
+                label="numerical approx",
+            )
         plt.legend()
     if savefig is not None:
         title = savefig.split("/")[-1]
@@ -105,20 +118,20 @@ def main(
     partial_deriv_pi_s=False,
     partial_deriv_loss_s=False,
     partial_deriv_s_theta=False,
-    density=False
+    density=False,
 ):
     np.random.seed(0)
 
     n_types = 1
     d = 2
-    etas = np.random.uniform(4., 6., n_types * d).reshape(n_types, d, 1)
-#    etas = np.ones((n, d, 1)) * 5.
+    etas = np.random.uniform(4.0, 6.0, n_types * d).reshape(n_types, d, 1)
+    #    etas = np.ones((n, d, 1)) * 5.
     gammas = np.random.uniform(0.05, 0.1, n_types * d).reshape(n_types, d, 1)
-#    gammas = np.random.uniform(1., 2., n_types * d).reshape(n_types, d, 1)
+    #    gammas = np.random.uniform(1., 2., n_types * d).reshape(n_types, d, 1)
     dic = {"etas": etas, "gammas": gammas}
     agent_dist = AgentDistribution(n=n, d=d, n_types=n_types, types=dic, prop=None)
     #    sigma = compute_continuity_noise(agent_dist)
-    true_beta = np.array([1., 0.]).reshape(2, 1)
+    true_beta = np.array([1.0, 0.0]).reshape(2, 1)
 
     derivatives_to_plot = []
     if total_deriv:
@@ -135,25 +148,25 @@ def main(
         derivatives_to_plot.append("partial_deriv_s_theta")
     if density:
         derivatives_to_plot.append("density_estimate")
-#    sigma = compute_contraction_noise(agent_dist)
-    sigma = 2.
+    #    sigma = compute_contraction_noise(agent_dist)
+    sigma = 2.0
     q = 0.7
     f = fixed_point_interpolation_true_distribution(
         agent_dist, sigma, q, plot=False, savefig=None
     )
     print("perturbation_s", perturbation_s, "perturbation_theta", perturbation_theta)
     plot(
-            agent_dist,
-            sigma,
-            q,
-            f,
-            perturbation_s_size=perturbation_s,
-            perturbation_theta_size=perturbation_theta,
-            savefig="results/figures/{}".format(save),
-            true_beta=true_beta,
-            derivatives_to_plot=derivatives_to_plot,
-        )
-    
+        agent_dist,
+        sigma,
+        q,
+        f,
+        perturbation_s_size=perturbation_s,
+        perturbation_theta_size=perturbation_theta,
+        savefig="results/figures/{}".format(save),
+        true_beta=true_beta,
+        derivatives_to_plot=derivatives_to_plot,
+    )
+
 
 if __name__ == "__main__":
     _parser = argh.ArghParser()

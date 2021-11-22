@@ -5,12 +5,7 @@ from utils import convert_to_unit_vector, compute_score_bounds
 
 class ExpectedGradient:
     def __init__(
-        self,
-        agent_dist,
-        theta,
-        s,
-        sigma,
-        true_beta,
+        self, agent_dist, theta, s, sigma, true_beta,
     ):
         self.agent_dist = agent_dist
         self.sigma = sigma
@@ -44,9 +39,9 @@ class ExpectedGradient:
         dim = self.agent_dist.d
         assert dim == 2, "Method does not work for dimension {}".format(dim)
 
-        z = self.s - np.array([np.matmul(self.beta.T, x) for x in self.br_dist]).reshape(
-            len(self.br_dist), 1
-        )
+        z = self.s - np.array(
+            [np.matmul(self.beta.T, x) for x in self.br_dist]
+        ).reshape(len(self.br_dist), 1)
         prob = norm.pdf(z, loc=0.0, scale=self.sigma)
 
         first_term = np.array(
@@ -103,9 +98,9 @@ class ExpectedGradient:
         dim = self.agent_dist.d
         assert dim == 2, "Method does not work for dimension {}".format(dim)
 
-        z = self.s - np.array([np.matmul(self.beta.T, x) for x in self.br_dist]).reshape(
-            len(self.br_dist), 1
-        )
+        z = self.s - np.array(
+            [np.matmul(self.beta.T, x) for x in self.br_dist]
+        ).reshape(len(self.br_dist), 1)
         prob = norm.pdf(z, loc=0.0, scale=self.sigma)
 
         vec = np.array(
@@ -130,7 +125,8 @@ class ExpectedGradient:
         )
         prob = norm.pdf(z, loc=0.0, scale=self.sigma)
         vec = np.array(
-            [-np.matmul(self.beta.T, self.grad_s_dist[i]).item()
+            [
+                -np.matmul(self.beta.T, self.grad_s_dist[i]).item()
                 for i in range(len(self.br_dist))
             ]
         ).reshape(self.agent_dist.n_types, 1)
@@ -139,11 +135,15 @@ class ExpectedGradient:
         return d_pi_d_s.item()
 
     def expected_loss(self):
-        z = self.s - np.array([np.matmul(self.beta.T, x) for x in self.br_dist]).reshape(
-            len(self.br_dist), 1
+        z = self.s - np.array(
+            [np.matmul(self.beta.T, x) for x in self.br_dist]
+        ).reshape(len(self.br_dist), 1)
+        prob = 1 - norm.cdf(x=z, loc=0.0, scale=self.sigma)
+        product = (
+            self.true_scores
+            * prob
+            * self.agent_dist.prop.reshape(self.agent_dist.n_types, 1)
         )
-        prob = 1 - norm.cdf(x=z, loc=0., scale=self.sigma)
-        product = self.true_scores * prob * self.agent_dist.prop.reshape(self.agent_dist.n_types, 1)
 
         return np.sum(product).item()
 
@@ -166,6 +166,6 @@ class ExpectedGradient:
             "partial_deriv_pi_theta": gamma_pi_theta,
             "partial_deriv_s_theta": gamma_s_theta,
             "density_estimate": density_estimate,
-            "loss": self.expected_loss()
+            "loss": self.expected_loss(),
         }
         return dic

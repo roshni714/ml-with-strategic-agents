@@ -1,5 +1,5 @@
 #!/bin/bash
-perturbation_s=(0.05 0.1 0.2 0.35)
+perturbation_s=(0.05 0.10 0.2)
 perturbation_theta=(0.01 0.025 0.05)
 sample_size=(1000000)
 for PERTURB_S in "${perturbation_s[@]}";
@@ -12,7 +12,7 @@ do
 			str_perturb_theta="$PERTURB_THETA"
 			replace_dot_theta=${str_perturb_theta//./_}
 			replace_dot=${str_perturb_s//./_}
-			perturb_s="perturb_s_${replace_dot}_perturb_theta_${replace_dot_theta}" 
+			perturb_s="combine_perturb_s_${replace_dot}_perturb_theta_${replace_dot_theta}" 
 			sample="_n_$N"
 			name="${perturb_s}${sample}"
 			echo $name
