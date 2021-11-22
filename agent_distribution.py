@@ -192,7 +192,7 @@ class AgentDistribution:
 
         n_br = br_dist[self.n_agent_types]
         noisy_scores += n_br
-#        noisy_scores = np.clip(noisy_scores, a_min=bounds[0], a_max=bounds[1])
+        #        noisy_scores = np.clip(noisy_scores, a_min=bounds[0], a_max=bounds[1])
 
         return noisy_scores.reshape(self.n, 1)
 

@@ -2,6 +2,7 @@ import csv
 import os
 import matplotlib.pyplot as plt
 
+
 def report_results(results, thetas, losses, save):
     results_file = "results/" + save + ".csv"
     write_result(results_file, results)

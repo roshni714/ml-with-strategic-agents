@@ -42,10 +42,10 @@ def learn_model(
             theta,
             s_eq,
             sigma,
-#            q,
+            #            q,
             true_beta,
-#            perturbation_s_size=perturbation_s,
-#            perturbation_theta_size=perturbation_theta,
+            #            perturbation_s_size=perturbation_s,
+            #            perturbation_theta_size=perturbation_theta,
         )
         dic = grad_est.compute_total_derivative()
         loss = dic["loss"]

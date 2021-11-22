@@ -30,9 +30,9 @@ class Agent:
         bounds = compute_score_bounds(beta)
         if s < bounds[0] and s > bounds[1]:
             print("CAUTION: s out of bounds")
-#        assert (
-#            s >= bounds[0] and s <= bounds[1]
-#        ), "cannot compute best response for s out of score bounds"
+        #        assert (
+        #            s >= bounds[0] and s <= bounds[1]
+        #        ), "cannot compute best response for s out of score bounds"
         try:
             val = newton(
                 Agent._func_derivative_utility(beta, s, self.eta, self.gamma, sigma),
@@ -46,7 +46,7 @@ class Agent:
                     self.eta, self.gamma, beta, s, sigma
                 )
             )
-        #val = np.clip(val, a_min=0.0, a_max=1.0)
+        # val = np.clip(val, a_min=0.0, a_max=1.0)
         return val.reshape(beta.shape)
 
     def plot_best_response_score(self, beta, sigma):
