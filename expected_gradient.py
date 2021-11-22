@@ -138,6 +138,15 @@ class ExpectedGradient:
         d_pi_d_s = np.sum(res)
         return d_pi_d_s.item()
 
+    def expected_loss(self):
+        z = self.s - np.array([np.matmul(self.beta.T, x) for x in self.br_dist]).reshape(
+            len(self.br_dist), 1
+        )
+        prob = 1 - norm.cdf(x=z, loc=0., scale=self.sigma)
+        product = self.true_scores * prob * self.agent_dist.prop.reshape(self.agent_dist.n_types, 1)
+
+        return np.sum(product).item()
+
     def compute_total_derivative(self):
         gamma_loss_s = self.expected_gradient_loss_s()
         gamma_loss_theta = self.expected_gradient_loss_theta()
@@ -157,5 +166,6 @@ class ExpectedGradient:
             "partial_deriv_pi_theta": gamma_pi_theta,
             "partial_deriv_s_theta": gamma_s_theta,
             "density_estimate": density_estimate,
+            "loss": self.expected_loss()
         }
         return dic

@@ -3,6 +3,7 @@ import argh
 
 from agent_distribution import AgentDistribution
 from gradient_estimation import GradientEstimator
+from expected_gradient import ExpectedGradient
 from reporting import report_results
 from utils import compute_continuity_noise, fixed_point_interpolation_true_distribution
 from optimal_beta import optimal_beta_expected_policy_loss
@@ -36,22 +37,22 @@ def learn_model(
 
         s_eq = f(theta)
         thetas.append(theta)
-        grad_est = GradientEstimator(
+        grad_est = ExpectedGradient(
             agent_dist,
             theta,
             s_eq,
             sigma,
-            q,
+#            q,
             true_beta,
-            perturbation_s_size=perturbation_s,
-            perturbation_theta_size=perturbation_theta,
+#            perturbation_s_size=perturbation_s,
+#            perturbation_theta_size=perturbation_theta,
         )
-        grad_theta, losses = grad_est.compute_total_derivative()
-
-        avg_loss = np.mean(losses).item()
-        emp_losses.append(avg_loss)
+        dic = grad_est.compute_total_derivative()
+        loss = dic["loss"]
+        grad_theta = dic["total_deriv"]
+        emp_losses.append(loss)
         print(
-            "Loss: {}".format(avg_loss),
+            "Loss: {}".format(loss),
             "Theta:{}".format(theta),
             "Gradient: {}".format(grad_theta),
         )
@@ -119,6 +120,7 @@ def main(
         "final_loss": emp_losses[-1],
     }
     assert len(thetas) == len(emp_losses)
+    print(results)
     report_results(results, thetas, emp_losses, save)
 
 

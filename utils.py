@@ -68,15 +68,19 @@ def compute_score_bounds(beta):
         beta.shape[0]
     )
     x_box = [
-        np.array([0.0, 1.0]),
-        np.array([1.0, 0.0]),
-        np.array([1.0, 1.0]),
+        np.array([0.0, 10.0]),
+        np.array([10.0, 0.0]),
+        np.array([10.0, 10.0]),
         np.array([0.0, 0.0]),
     ]
 
     scores = [np.matmul(beta.T, x.reshape(2, 1)).item() for x in x_box]
     return min(scores), max(scores)
 
+
+def smooth_indicator(x):
+    v = 100.
+    return 1/ (1. + np.exp(-v * ( x + 1/ np.sqrt(v)))) 
 
 def spherical_coordinates(beta):
     assert beta.shape[0] == 2, "Method does not work for beta with dim {}".format(
