@@ -5,7 +5,7 @@ from scipy.misc import derivative
 
 from agent_distribution import AgentDistribution
 from gradient_estimation import GradientEstimator
-from utils import compute_continuity_noise, fixed_point_interpolation_true_distribution
+from utils import compute_continuity_noise, fixed_point_interpolation_true_distribution, compute_contraction_noise
 from reparametrized_gradient import expected_total_derivative
 from expected_gradient import ExpectedGradient
 
@@ -109,10 +109,12 @@ def main(
 ):
     np.random.seed(0)
 
-    n_types = 20
+    n_types = 1
     d = 2
-    etas = np.random.uniform(0.3, 0.8, n_types * d).reshape(n_types, d, 1)
-    gammas = np.random.uniform(5.0, 8.0, n_types * d).reshape(n_types, d, 1)
+    etas = np.random.uniform(4., 6., n_types * d).reshape(n_types, d, 1)
+#    etas = np.ones((n, d, 1)) * 5.
+    gammas = np.random.uniform(0.05, 0.1, n_types * d).reshape(n_types, d, 1)
+#    gammas = np.random.uniform(1., 2., n_types * d).reshape(n_types, d, 1)
     dic = {"etas": etas, "gammas": gammas}
     agent_dist = AgentDistribution(n=n, d=d, n_types=n_types, types=dic, prop=None)
     #    sigma = compute_continuity_noise(agent_dist)
@@ -133,7 +135,8 @@ def main(
         derivatives_to_plot.append("partial_deriv_s_theta")
     if density:
         derivatives_to_plot.append("density_estimate")
-    sigma = 0.35
+#    sigma = compute_contraction_noise(agent_dist)
+    sigma = 2.
     q = 0.7
     f = fixed_point_interpolation_true_distribution(
         agent_dist, sigma, q, plot=False, savefig=None
@@ -146,7 +149,7 @@ def main(
             f,
             perturbation_s_size=perturbation_s,
             perturbation_theta_size=perturbation_theta,
-            savefig="results/figures_2/{}".format(save),
+            savefig="results/figures/{}".format(save),
             true_beta=true_beta,
             derivatives_to_plot=derivatives_to_plot,
         )

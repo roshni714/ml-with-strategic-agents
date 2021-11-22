@@ -1,6 +1,6 @@
 from scipy.stats import bernoulli, norm, gaussian_kde
 import numpy as np
-from utils import convert_to_unit_vector, compute_score_bounds
+from utils import convert_to_unit_vector, compute_score_bounds, smooth_indicator
 
 
 class GradientEstimator:
@@ -19,10 +19,10 @@ class GradientEstimator:
         self.sigma = sigma
         
         self.perturbations_s = (
-            2 * bernoulli.rvs(p=0.5, size=int(agent_dist.n/2)).reshape(int(agent_dist.n/2), 1) - 1
+            2 * bernoulli.rvs(p=0.5, size=agent_dist.n).reshape(agent_dist.n, 1) - 1
         ) * perturbation_s_size
         self.perturbations_theta = (
-            2 * bernoulli.rvs(p=0.5, size=int(agent_dist.n/2)).reshape(int(agent_dist.n/2), 1) - 1
+            2 * bernoulli.rvs(p=0.5, size=agent_dist.n).reshape(agent_dist.n, 1) - 1
         ) * perturbation_theta_size
         self.noise = norm.rvs(loc=0, scale=sigma, size=agent_dist.n).reshape(
             agent_dist.n, 1
@@ -33,7 +33,8 @@ class GradientEstimator:
         self.q = q
         self.beta = convert_to_unit_vector(self.theta)
         self.true_beta = true_beta
-
+        etas = agent_dist.get_etas()
+        self.true_scores = np.array([ - np.matmul(self.true_beta.T, eta).item()  for eta in etas]).reshape(agent_dist.n, 1)
         self.perturbation_s_size = perturbation_s_size
         self.perturbation_theta_size = perturbation_theta_size
 
@@ -55,7 +56,7 @@ class GradientEstimator:
                     )
 
         unperturbed_scores = []
-        for i in range(int(self.agent_dist.n/2)):
+        for i in range(self.agent_dist.n):
             agent_type = self.agent_dist.n_agent_types[i]
             p_theta = self.perturbations_theta[i].item()
             br_dics = best_responses[agent_type]
@@ -66,10 +67,9 @@ class GradientEstimator:
                     scores.append(np.matmul(beta_perturbed.T, br).item())
                     unperturbed_scores.append(np.matmul(self.beta.T, br).item())
                     continue
-        scores = np.array(scores).reshape(int(self.agent_dist.n/2), 1)
-        noisy_scores = scores + self.noise[:int(self.agent_dist.n/2)]
-        noisy_unperturbed_scores = np.array(unperturbed_scores).reshape(int(self.agent_dist.n/2), 1) + self.noise[:int(self.agent_dist.n/2)]
-        return noisy_scores, noisy_unperturbed_scores
+        scores = np.array(scores).reshape(self.agent_dist.n, 1)
+        unperturbed_scores = np.array(unperturbed_scores).reshape(self.agent_dist.n, 1)
+        return scores, unperturbed_scores
 
     def get_s_perturbed_scores(self):
         scores = []
@@ -87,9 +87,9 @@ class GradientEstimator:
                     )
 
         unperturbed_scores = [] 
-        for i in range(int(self.agent_dist.n/2), self.agent_dist.n):
+        for i in range(self.agent_dist.n):
             agent_type = self.agent_dist.n_agent_types[i]
-            p_s = self.perturbations_s[i - int(self.agent_dist.n/2)].item()
+            p_s = self.perturbations_s[i].item()
             br_dics = best_responses[agent_type]
             for dic in br_dics:
                 if dic["p_s"] == p_s:
@@ -97,29 +97,22 @@ class GradientEstimator:
                     scores.append(np.matmul(self.beta.T, br).item() - p_s)
                     unperturbed_scores.append(np.matmul(self.beta.T, br).item())
                     continue
-        scores = np.array(scores).reshape(int(self.agent_dist.n/2), 1)
-        noisy_scores = scores + self.noise[int(self.agent_dist.n/2):]
-        noisy_unperturbed_scores = np.array(unperturbed_scores).reshape(int(self.agent_dist.n/2), 1) + self.noise[int(self.agent_dist.n/2):] 
-        return noisy_scores, noisy_unperturbed_scores
+        scores = np.array(scores).reshape(self.agent_dist.n, 1)
+        unperturbed_scores = np.array(unperturbed_scores).reshape(self.agent_dist.n, 1) 
+        return scores, unperturbed_scores
 
-    def compute_gradients(self, scores_s_perturbed, scores_theta_perturbed, cutoff):
+    def compute_gradients(self, scores_s_perturbed, scores_theta_perturbed, scores_s_unperturbed, scores_theta_unperturbed, cutoff):
         Q_s = np.matmul(self.perturbations_s.T, self.perturbations_s)
         perturbations_theta = self.perturbations_theta.reshape(
-            int(self.agent_dist.n/2), self.agent_dist.d - 1
+            self.agent_dist.n, self.agent_dist.d - 1
         )
         Q_theta = np.matmul(perturbations_theta.T, perturbations_theta)
 
-        # Compute loss
-        treatments_s = scores_s_perturbed >= cutoff 
-        treatments_theta = scores_theta_perturbed >= cutoff
-        etas = self.agent_dist.get_etas()
-        loss_vector_s = treatments_s * np.array(
-            [-np.matmul(self.true_beta.T, etas[i]).item() for i in range(int(self.agent_dist.n/2))]
-        ).reshape(int(self.agent_dist.n/2), 1)
-
-        loss_vector_theta = treatments_theta * np.array(
-            [-np.matmul(self.true_beta.T, etas[i]).item() for i in range(int(self.agent_dist.n/2), self.agent_dist.n)]
-        ).reshape(int(self.agent_dist.n/2), 1)
+       # Compute loss
+        treatments_s = (scores_s_perturbed + self.noise) > cutoff 
+        treatments_theta = (scores_theta_perturbed + self.noise) > cutoff
+        loss_vector_s = treatments_s * self.true_scores
+        loss_vector_theta = treatments_theta * self.true_scores
 
         gamma_loss_s = np.linalg.solve(
             Q_s, np.matmul(self.perturbations_s.T, loss_vector_s)
@@ -129,16 +122,26 @@ class GradientEstimator:
         ).item()
 
         # Compute derivative of CDF
-        indicators_s =   scores_s_perturbed + self.perturbations_s < cutoff #remove perturbations for estimating CDF
-        indicators_theta = scores_theta_perturbed < cutoff
-        gamma_pi_s = np.linalg.solve(
-            Q_s, np.matmul(self.perturbations_s.T, indicators_s)
+#        indicators_s =   smooth_indicator(-scores_s_unperturbed + self.s) #remove perturbations for estimating CDF
+#        indicators_theta = smooth_indicator(-scores_theta_perturbed + self.s)
+#        indicators_s = scores_s_unperturbed >= cutoff
+#        indicators_theta = scores_theta_perturbed >= cutoff
+#        gamma_pi_s = -np.linalg.solve(
+#            Q_s, np.matmul(self.perturbations_s.T, indicators_s)
+#        ).item()
+#        gamma_pi_theta = -np.linalg.solve(
+#            Q_theta, np.matmul(perturbations_theta.T, indicators_theta)
+#        ).item()
+        probs_s = (scores_s_unperturbed + self.noise) > cutoff
+        probs_theta = (scores_theta_perturbed + self.noise) > cutoff 
+        gamma_pi_s = -np.linalg.solve(
+            Q_s, np.matmul(self.perturbations_s.T, probs_s)
         ).item()
-        gamma_pi_theta = np.linalg.solve(
-            Q_theta, np.matmul(perturbations_theta.T, indicators_theta)
+        gamma_pi_theta = -np.linalg.solve(
+            Q_theta, np.matmul(perturbations_theta.T, probs_theta)
         ).item()
 
-        loss_vector = np.concatenate((loss_vector_s, loss_vector_theta)).reshape(self.agent_dist.n, 1)
+        loss_vector = np.concatenate((loss_vector_s, loss_vector_theta)).reshape(self.agent_dist.n * 2, 1)
 
         return gamma_loss_s, gamma_loss_theta, gamma_pi_s, gamma_pi_theta, loss_vector
 
@@ -151,8 +154,7 @@ class GradientEstimator:
         # not sure if perturbations should be included for CDF scores may need to fix model params one
         scores_theta_perturbed, scores_theta_unperturbed = self.get_theta_perturbed_scores()
         scores_s_perturbed, scores_s_unperturbed = self.get_s_perturbed_scores()
-        scores = np.concatenate((scores_s_unperturbed, scores_theta_unperturbed)).reshape(self.agent_dist.n, 1)
-
+        scores = np.concatenate((scores_s_perturbed + self.noise, scores_theta_perturbed + self.noise)).reshape(self.agent_dist.n * 2, 1)
         cutoff = np.quantile(scores, self.q).item()
 
         (
@@ -161,8 +163,9 @@ class GradientEstimator:
             gamma_pi_s,
             gamma_pi_theta,
             loss_vector,
-        ) = self.compute_gradients(scores_s_perturbed, scores_theta_perturbed, cutoff)
-        density_scores = np.concatenate((scores_s_unperturbed, scores_theta_unperturbed)).reshape(self.agent_dist.n, 1)
+        ) = self.compute_gradients(scores_s_perturbed, scores_theta_perturbed, scores_s_unperturbed, scores_theta_unperturbed, cutoff)
+        density_scores = np.concatenate((scores_s_unperturbed + self.noise, scores_theta_unperturbed + self.noise)).reshape(self.agent_dist.n * 2, 1)
+
         density_estimate = self.compute_density(density_scores, cutoff)
 
         gamma_s_theta = -(1 / (density_estimate + gamma_pi_s)) * gamma_pi_theta

@@ -8,7 +8,7 @@ from gradient_estimation import GradientEstimator
 from utils import compute_continuity_noise, fixed_point_interpolation_true_distribution
 from reparametrized_gradient import expected_total_derivative
 from expected_gradient import ExpectedGradient
-from metrics import bias, variance
+from metrics import mse
 
 def compute_metrics_vs_perturbation_s(agent_dist,
                     sigma,
@@ -18,7 +18,7 @@ def compute_metrics_vs_perturbation_s(agent_dist,
                     true_beta=None,
                     savefig=None
                     ):
-    perturbation_s_sizes = np.linspace(0.01, 0.15, 5)
+    perturbation_s_sizes = np.linspace(0.01, 0.20, 10)
     default_theta_size = 0.1
     results = [{"perturbation_s_size": perturb_s} for perturb_s in perturbation_s_sizes]
     derivs_exp_all = []
@@ -53,16 +53,13 @@ def compute_metrics_vs_perturbation_s(agent_dist,
     for perturb_s in perturbation_s_sizes:
         final_res = {}
         for deriv in derivatives:
-            bias_key = deriv + "_bias"
-            variance_key = deriv + "_variance"
+            mse_key = deriv + "_mse"
             deriv_exp = [dic[deriv] for dic in derivs_exp_all]
             for res in results:
                 if res["perturbation_s_size"] == perturb_s:
                     deriv_emp = res[deriv]
-                    bias_est = bias(deriv_emp, deriv_exp)
-                    variance_est = variance(deriv_emp)
-                    final_res[bias_key] = bias_est
-                    final_res[variance_key] = variance_est
+                    mse_est = mse(deriv_emp, deriv_exp)
+                    final_res[mse_key] = mse_est
         final_results.append(final_res)
 
     fig, ax = plt.subplots(1, len(final_results[0].keys()), figsize=(12 * len(final_results[0]), 5))
@@ -89,7 +86,7 @@ def compute_metrics_vs_perturbation_theta(agent_dist,
                     true_beta=None,
                     savefig=None
                     ):
-    perturbation_theta_sizes = np.linspace(0.01, 0.15, 5)
+    perturbation_theta_sizes = np.linspace(0.01, 0.20, 10)
     default_s_size = 0.1
     results = [{"perturbation_theta_size": perturb_s} for perturb_s in perturbation_theta_sizes]
     derivs_exp_all = []
@@ -124,16 +121,13 @@ def compute_metrics_vs_perturbation_theta(agent_dist,
     for perturb_theta in perturbation_theta_sizes:
         final_res = {}
         for deriv in derivatives:
-            bias_key = deriv + "_bias"
-            variance_key = deriv + "_variance"
+            mse_key = deriv + "_mse"
             deriv_exp = [dic[deriv] for dic in derivs_exp_all]
             for res in results:
                 if res["perturbation_theta_size"] == perturb_theta:
                     deriv_emp = res[deriv]
-                    bias_est = bias(deriv_emp, deriv_exp)
-                    variance_est = variance(deriv_emp)
-                    final_res[bias_key] = bias_est
-                    final_res[variance_key] = variance_est
+                    mse_est = mse(deriv_emp, deriv_exp)
+                    final_res[mse_key] = mse_est
         final_results.append(final_res)
 
     fig, ax = plt.subplots(1, len(final_results[0].keys()), figsize=(12 * len(final_results[0]), 5))
@@ -183,8 +177,8 @@ def main(
 
     n_types = 1
     d = 2
-    etas = np.random.uniform(0.3, 0.8, n_types * d).reshape(n_types, d, 1)
-    gammas = np.random.uniform(5.0, 8.0, n_types * d).reshape(n_types, d, 1)
+    etas = np.random.uniform(3., 8., n_types * d).reshape(n_types, d, 1)
+    gammas = np.random.uniform(0.05, 0.1, n_types * d).reshape(n_types, d, 1)
     dic = {"etas": etas, "gammas": gammas}
     agent_dist = AgentDistribution(n=n, d=d, n_types=n_types, types=dic, prop=None)
     #    sigma = compute_continuity_noise(agent_dist)
@@ -205,7 +199,7 @@ def main(
         derivatives_to_plot.append("partial_deriv_s_theta")
     if density:
         derivatives_to_plot.append("density_estimate")
-    sigma = 0.35
+    sigma = 2.
     q = 0.7
     f = fixed_point_interpolation_true_distribution(
         agent_dist, sigma, q, plot=False, savefig=None
