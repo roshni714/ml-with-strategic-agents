@@ -9,7 +9,6 @@ from utils import compute_score_bounds
 
 class Agent:
     """This is a class for representing a strategic agent.
-
     Keyword arguments:
     eta -- natural ability of agent (D, 1) array
     gamma -- gaming ability of agent (D, 1) array
@@ -21,7 +20,6 @@ class Agent:
 
     def best_response(self, beta, s, sigma):
         """Method for computing an agent's best response given a particular model and threshold under a noise assumption.
-
         Keyword arguments:
         beta -- model parameters (D, 1) array
         s -- threshold (float)
@@ -37,7 +35,8 @@ class Agent:
             val = newton(
                 Agent._func_derivative_utility(beta, s, self.eta, self.gamma, sigma),
                 x0=self.eta.flatten(),
-                maxiter=5000,
+                maxiter=20000,
+                tol=1.48e-09,
             )
         except:
             val = self.eta
@@ -109,12 +108,10 @@ class Agent:
     def br_gradient_beta(self, beta, s, sigma):
         """
         Computes of the Jacobian of the best response wrt to beta.
-
         Keyword arguments:
         beta -- model parameters (D, 1)
         s -- threshold (float)
         sigma -- standard deviation of the noise distribution (float)
-
         Returns:
         best_response -- (D, 1) array
         jacobian -- (D, D) matrix
@@ -124,12 +121,10 @@ class Agent:
     def br_gradient_s(self, beta, s, sigma):
         """
         Computes of the gradient of the best response wrt to s.
-
         Keyword arguments:
         beta -- model parameters (D, 1)
         s -- threshold (float)
         sigma -- standard deviation of the noise distribution (float)
-
         Returns:
         best_response -- (D, 1) array
         deriv_s -- (D, 1) array

@@ -281,11 +281,7 @@ class AgentDistribution:
         return q, valid_theta
 
     def quantile_fixed_point_true_distribution(self, beta, sigma, q, plot=False):
-        bounds = compute_score_bounds(beta)
-        thresholds = np.linspace(bounds[0], bounds[1], 50)
-
-        quantile_br = []
-        for s in thresholds:
+        def compute_fs_s(s):
             cdf_val = 0.0
             for i, agent in enumerate(self.agents):
                 cdf_val += (
@@ -296,23 +292,24 @@ class AgentDistribution:
                     )
                     * self.prop[i]
                 )
-            quantile_br.append(cdf_val.item())
+            return cdf_val.item()
 
-        quantile_br = np.array(quantile_br).reshape(thresholds.shape)
-        f = interp1d(quantile_br, thresholds, kind="linear")
-        granular_thresholds = np.linspace(min(quantile_br), max(quantile_br), 100)
+        bounds = compute_score_bounds(beta)
+        l = bounds[0]
+        r = bounds[1]
+        curr = (l + r) / 2
+        val = compute_fs_s(curr)
 
-        if plot:
-            plt.plot(quantile_br, thresholds, label="actual curve")
-            plt.plot(granular_thresholds, f(granular_thresholds), label="interpolation")
-            plt.legend()
-            plt.xlabel("F_s(s)")
-            plt.ylabel("s")
-            plt.title("s vs. F_s(s)")
-            plt.show()
-            plt.close()
+        while abs(val - q) > 1e-5:
+            if val > q:
+                r = curr
+            if val < q:
+                l = curr
 
-        return f(q)
+            curr = (l + r) / 2
+            val = compute_fs_s(curr)
+
+        return curr
 
     def best_response_pdf(self, beta, s, sigma, r):
         bounds = compute_score_bounds(beta)
@@ -355,7 +352,7 @@ class AgentDistribution:
 
     def quantile_fixed_point_naive(self, beta, sigma, q, plot=False):
         bounds = compute_score_bounds(beta)
-        thresholds = np.linspace(bounds[0], bounds[1], 50)
+        thresholds = np.linspace(bounds[0], bounds[1], 500)
         quantile_br = [
             self.quantile_best_response(beta, s, sigma, q) for s in thresholds
         ]

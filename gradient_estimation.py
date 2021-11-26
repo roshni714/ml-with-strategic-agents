@@ -149,7 +149,7 @@ class GradientEstimator:
             "partial_deriv_pi_theta": gamma_pi_theta,
             "partial_deriv_s_theta": gamma_s_theta,
             "density_estimate": density_estimate,
-            "losses": loss_vector.flatten(),
+            "loss": loss_vector.mean().item(),
         }
         return dic
 

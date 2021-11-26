@@ -37,15 +37,15 @@ def empirical_policy_loss(agent_dist, beta, s, sigma, q, true_beta=None):
     ).reshape(agent_dist.n, 1)
 
     br_dist = agent_dist.best_response_score_distribution(beta, s, sigma)
-    n_br = br_dist[agent_dist.n_agent_types]
+    n_br = br_dist[agent_dist.n_agent_types].reshape(agent_dist.n, 1)
     curr_bounds = compute_score_bounds(beta)
 
-    noisy_scores = norm.rvs(loc=0.0, scale=sigma, size=agent_dist.n)
+    noisy_scores = norm.rvs(loc=0.0, scale=sigma, size=agent_dist.n).reshape(
+        agent_dist.n, 1
+    )
     noisy_scores += n_br
-    noisy_scores = np.clip(
-        noisy_scores, a_min=curr_bounds[0], a_max=curr_bounds[1]
-    ).reshape(agent_dist.n, 1)
-    x = np.quantile(noisy_scores, q)
+    x = np.quantile(noisy_scores, q).item()
+    print(x)
     loss = -np.mean(true_scores * (noisy_scores >= x))
     return loss
 
@@ -120,17 +120,15 @@ def expected_policy_loss(agent_dist, theta, sigma, f, true_beta=None):
         true_beta = np.zeros(beta.shape)
         true_beta[0] = 1.0
 
-    bounds = compute_score_bounds(beta)
-    s = np.clip(f(theta), a_min=bounds[0], a_max=bounds[1])
+    #    bounds = compute_score_bounds(beta)
+    s = f(theta)
     true_scores = np.array(
         [np.matmul(true_beta.T, agent.eta).item() for agent in agent_dist.agents]
-    )
+    ).reshape(agent_dist.n_types, 1)
     br_dist = agent_dist.best_response_score_distribution(beta, s, sigma)
-    z = s - br_dist
-
+    z = s - br_dist.reshape(agent_dist.n_types, 1)
     prob = 1 - norm.cdf(x=z, loc=0.0, scale=sigma)
-    product = -true_scores * prob * agent_dist.prop
-
+    product = -true_scores * prob * agent_dist.prop.reshape(agent_dist.n_types, 1)
     return np.sum(product).item()  # np.sum(product).item()
 
 

@@ -7,7 +7,7 @@ def report_results(results, thetas, losses, save):
     results_file = "results/" + save + ".csv"
     write_result(results_file, results)
 
-    train_file = "results/" + save + "_train.csv"
+    train_file = "results/" + save + "_seed_{}".format(results["seed"]) + "_train.csv"
 
     for i in range(len(thetas)):
         iteration_dic = {}
