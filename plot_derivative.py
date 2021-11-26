@@ -98,6 +98,7 @@ def plot(
 
 
 @argh.arg("--n", default=100000)
+@argh.arg("--n_types", default=1)
 @argh.arg("--perturbation_s", default=0.1)
 @argh.arg("--perturbation_theta", default=0.1)
 @argh.arg("--total_deriv", default=False)
@@ -109,6 +110,7 @@ def plot(
 @argh.arg("--density", default=False)
 def main(
     n=100000,
+    n_types=1,
     perturbation_s=0.1,
     perturbation_theta=0.1,
     save="results",
@@ -122,11 +124,10 @@ def main(
 ):
     np.random.seed(0)
 
-    n_types = 1
     d = 2
-    etas = np.random.uniform(4.0, 6.0, n_types * d).reshape(n_types, d, 1)
+    etas = np.random.uniform(3.0, 8.0, n_types * d).reshape(n_types, d, 1)
     #    etas = np.ones((n, d, 1)) * 5.
-    gammas = np.random.uniform(0.05, 0.1, n_types * d).reshape(n_types, d, 1)
+    gammas = np.random.uniform(0.05, 2.0, n_types * d).reshape(n_types, d, 1)
     #    gammas = np.random.uniform(1., 2., n_types * d).reshape(n_types, d, 1)
     dic = {"etas": etas, "gammas": gammas}
     agent_dist = AgentDistribution(n=n, d=d, n_types=n_types, types=dic, prop=None)
@@ -149,7 +150,7 @@ def main(
     if density:
         derivatives_to_plot.append("density_estimate")
     #    sigma = compute_contraction_noise(agent_dist)
-    sigma = 2.0
+    sigma = compute_continuity_noise(agent_dist) + 0.05
     q = 0.7
     f = fixed_point_interpolation_true_distribution(
         agent_dist, sigma, q, plot=False, savefig=None

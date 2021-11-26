@@ -31,7 +31,7 @@ def plot_total_derivative(
             q,
             true_beta,
             perturbation_s_size=perturbation_s_size,
-            perturbation_theta_size=perturbation_theta_sizee,
+            perturbation_theta_size=perturbation_theta_size,
         )
         deriv.append(val)
         deriv_emp.append(hat_val)

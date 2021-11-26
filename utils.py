@@ -1,6 +1,7 @@
 import numpy as np
 import tqdm
 from scipy.interpolate import interp1d
+import matplotlib.pyplot as plt
 
 
 def convert_to_polar_coordinates(beta):
@@ -113,11 +114,10 @@ def fixed_point_interpolation_true_distribution(
     dim = agent_dist.d
     assert dim == 2, "Method does not work for dimension {}".format(dim)
 
-    thetas = np.linspace(-np.pi, np.pi, 50)
+    thetas = np.linspace(-np.pi, np.pi, 100)
     fixed_points = []
 
     # compute beta and fixed point for each theta
-    print("Computing fixed points...")
     for theta in tqdm.tqdm(thetas):
         beta = np.array([np.cos(theta), np.sin(theta)]).reshape(dim, 1)
         fp = agent_dist.quantile_fixed_point_true_distribution(
