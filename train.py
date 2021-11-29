@@ -67,25 +67,35 @@ def learn_model(
 
 
 def create_generic_agent_dist(n, n_types, d):
-    etas = np.random.uniform(3., 8., n_types * d).reshape(n_types, d, 1)
-    gammas = np.random.uniform(0.05, 2., n_types * d).reshape(n_types, d, 1)
+    etas = np.random.uniform(3.0, 8.0, n_types * d).reshape(n_types, d, 1)
+    gammas = np.random.uniform(0.05, 2.0, n_types * d).reshape(n_types, d, 1)
     dic = {"etas": etas, "gammas": gammas}
     agent_dist = AgentDistribution(n=n, d=d, n_types=n_types, types=dic, prop=None)
     return agent_dist
 
+
 def create_challenging_agent_dist(n, n_types, d):
-    gaming_type_etas = np.random.uniform(3., 5., int(n_types * d/2)).reshape(int(n_types/2), d, 1)
-    gaming_type_gamma_one = np.random.uniform(0.01, 0.02, int(n_types/2) ).reshape(int(n_types/2), 1, 1)
-    gaming_type_gamma_two = np.random.uniform(10., 20., int(n_types/2)).reshape(int(n_types/2), 1, 1)
+    gaming_type_etas = np.random.uniform(3.0, 5.0, int(n_types * d / 2)).reshape(
+        int(n_types / 2), d, 1
+    )
+    gaming_type_gamma_one = np.random.uniform(0.01, 0.02, int(n_types / 2)).reshape(
+        int(n_types / 2), 1, 1
+    )
+    gaming_type_gamma_two = np.random.uniform(10.0, 20.0, int(n_types / 2)).reshape(
+        int(n_types / 2), 1, 1
+    )
     gaming_type_gammas = np.hstack((gaming_type_gamma_one, gaming_type_gamma_two))
-    natural_type_etas = np.random.uniform(5., 7., int(n_types *d/2)).reshape(int(n_types/2), d, 1)
-    natural_type_gammas = np.random.uniform(10., 20., int(n_types * d/2)).reshape(int(n_types/2), d, 1)
+    natural_type_etas = np.random.uniform(5.0, 7.0, int(n_types * d / 2)).reshape(
+        int(n_types / 2), d, 1
+    )
+    natural_type_gammas = np.random.uniform(10.0, 20.0, int(n_types * d / 2)).reshape(
+        int(n_types / 2), d, 1
+    )
     etas = np.vstack((gaming_type_etas, natural_type_etas))
     gammas = np.vstack((gaming_type_gammas, natural_type_gammas))
     dic = {"etas": etas, "gammas": gammas}
     agent_dist = AgentDistribution(n=n, d=d, n_types=n_types, types=dic, prop=None)
     return agent_dist
-
 
 
 @argh.arg("--n", default=100000)
@@ -148,7 +158,7 @@ def main(
         "opt_theta": opt_theta,
         "final_loss": expected_policy_loss(agent_dist, thetas[-1], sigma, f),
         "final_theta": thetas[-1],
-        "gradient_type": gradient_type
+        "gradient_type": gradient_type,
     }
     assert len(thetas) == len(emp_losses)
     print(results)

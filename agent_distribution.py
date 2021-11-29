@@ -300,7 +300,7 @@ class AgentDistribution:
         curr = (l + r) / 2
         val = compute_fs_s(curr)
         count = 0
-        while (abs(val - q) > 1e-10):
+        while abs(val - q) > 1e-10:
             if val > q:
                 r = curr
             if val < q:
