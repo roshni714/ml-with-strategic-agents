@@ -150,7 +150,7 @@ def main(
     if density:
         derivatives_to_plot.append("density_estimate")
     #    sigma = compute_contraction_noise(agent_dist)
-    sigma = compute_continuity_noise(agent_dist) + 0.05
+    sigma = compute_continuity_noise(agent_dist) 
     q = 0.7
     f = fixed_point_interpolation_true_distribution(
         agent_dist, sigma, q, plot=False, savefig=None

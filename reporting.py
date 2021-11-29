@@ -16,11 +16,11 @@ def report_results(results, thetas, losses, save):
         iteration_dic["theta"] = thetas[i]
         write_result(train_file, iteration_dic)
 
-    plt.plot(list(range(len(losses))), losses)
-    plt.title("Learning at Equilibrium")
-    plt.xlabel("Iterations")
-    plt.ylabel("Loss")
-    plt.savefig("results/figures/{}.pdf".format(save))
+#    plt.plot(list(range(len(losses))), losses)
+#    plt.title("Learning at Equilibrium")
+#    plt.xlabel("Iterations")
+#    plt.ylabel("Loss")
+#    plt.savefig("results/figures/{}.pdf".format(save))
 
 
 def write_result(results_file, result):

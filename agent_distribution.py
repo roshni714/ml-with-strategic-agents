@@ -299,8 +299,8 @@ class AgentDistribution:
         r = bounds[1]
         curr = (l + r) / 2
         val = compute_fs_s(curr)
-
-        while abs(val - q) > 1e-5:
+        count = 0
+        while (abs(val - q) > 1e-10):
             if val > q:
                 r = curr
             if val < q:
@@ -308,6 +308,9 @@ class AgentDistribution:
 
             curr = (l + r) / 2
             val = compute_fs_s(curr)
+            count += 1
+            if count > 20:
+                break
 
         return curr
 
