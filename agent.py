@@ -25,7 +25,7 @@ class Agent:
         s -- threshold (float)
         sigma -- standard deviation of the noise distribution (float)
         """
-        bounds = compute_score_bounds(beta)
+        bounds = compute_score_bounds(beta, sigma)
         if s < bounds[0] and s > bounds[1]:
             print("CAUTION: s out of bounds")
         #        assert (
@@ -49,7 +49,7 @@ class Agent:
         return val.reshape(beta.shape)
 
     def plot_best_response_score(self, beta, sigma):
-        bounds = compute_score_bounds(beta)
+        bounds = compute_score_bounds(beta, sigma)
         thresholds = np.linspace(bounds[0], bounds[1], 50)
         br = [
             np.matmul(np.transpose(beta), self.best_response(beta, s, sigma)).item()
@@ -81,7 +81,7 @@ class Agent:
         return f
 
     def br_score_function_s(self, beta, sigma):
-        bounds = compute_score_bounds(beta)
+        bounds = compute_score_bounds(beta, sigma)
         thresholds = np.linspace(bounds[0], bounds[1], 50)
         br = [
             np.matmul(np.transpose(beta), self.best_response(beta, s, sigma)).item()
@@ -97,7 +97,7 @@ class Agent:
         valid_theta = []
         for theta in thetas:
             beta = np.array([np.cos(theta), np.sin(theta)]).reshape(2, 1)
-            bounds = compute_score_bounds(beta)
+            bounds = compute_score_bounds(beta, sigma)
             if s >= bounds[0] and s <= bounds[1]:
                 br.append(np.matmul(beta.T, self.best_response(beta, s, sigma)).item())
                 valid_theta.append(theta)
@@ -129,7 +129,7 @@ class Agent:
         best_response -- (D, 1) array
         deriv_s -- (D, 1) array
         """
-        bounds = compute_score_bounds(beta)
+        bounds = compute_score_bounds(beta, sigma)
         assert s >= bounds[0] and s <= bounds[1]
         G = np.diag(self.gamma.flatten())
         best_response = self.best_response(beta, s, sigma)
@@ -144,7 +144,7 @@ class Agent:
     def br_gradient_theta(self, theta, s, sigma):
 
         beta = np.array([np.cos(theta), np.sin(theta)]).reshape(2, 1)
-        bounds = compute_score_bounds(beta)
+        bounds = compute_score_bounds(beta, sigma)
         assert s >= bounds[0] and s <= bounds[1]
         best_response = self.best_response(beta, s, sigma)
         arg = s - np.matmul(beta.T, best_response)
