@@ -186,7 +186,7 @@ class AgentDistribution:
         Returns:
         br_dist -- a (N, 1) dimensional array
         """
-        bounds = compute_score_bounds(beta)
+        bounds = compute_score_bounds(beta, sigma)
         noisy_scores = norm.rvs(loc=0.0, scale=sigma, size=self.n)
         br_dist = self.best_response_score_distribution(beta, s, sigma)
 
@@ -220,7 +220,7 @@ class AgentDistribution:
         sigma -- standard deviation of noise distribution(float)
         q -- quantile between 0 and 1 (float)
         """
-        bounds = compute_score_bounds(beta)
+        bounds = compute_score_bounds(beta, sigma)
         thresholds = np.linspace(bounds[0], bounds[1], 50)
         quantile_br = [
             self.quantile_best_response(beta, s, sigma, q) for s in thresholds
@@ -239,7 +239,7 @@ class AgentDistribution:
         sigma -- standard deviation of noise distribution(float)
         q -- quantile between 0 and 1 (float)
         """
-        bounds = compute_score_bounds(beta)
+        bounds = compute_score_bounds(beta, sigma)
         thresholds = np.linspace(bounds[0], bounds[1], 50)
         quantile_map = []
 
@@ -266,7 +266,7 @@ class AgentDistribution:
         for theta in tqdm.tqdm(thetas):
             cdf_vals = []
             beta = np.array([np.cos(theta), np.sin(theta)]).reshape(2, 1)
-            bounds = compute_score_bounds(beta)
+            bounds = compute_score_bounds(beta, sigma)
             score_range = np.linspace(bounds[0], bounds[1], 50)
             if s >= bounds[0] and s <= bounds[1]:
                 for r in score_range:
@@ -294,10 +294,10 @@ class AgentDistribution:
                 )
             return cdf_val.item()
 
-        bounds = compute_score_bounds(beta)
+        bounds = compute_score_bounds(beta, sigma)
         l = bounds[0]
         r = bounds[1]
-        curr = (l + r) / 2
+        curr = np.array([(l + r) / 2])
         val = compute_fs_s(curr)
         count = 0
         while abs(val - q) > 1e-10:
@@ -309,13 +309,13 @@ class AgentDistribution:
             curr = (l + r) / 2
             val = compute_fs_s(curr)
             count += 1
-            if count > 20:
+            if count > 30:
                 break
 
-        return curr
+        return curr.item()
 
     def best_response_pdf(self, beta, s, sigma, r):
-        bounds = compute_score_bounds(beta)
+        bounds = compute_score_bounds(beta, sigma)
         if s < bounds[0]:
             return 0.0
         if s > bounds[1]:
@@ -335,7 +335,7 @@ class AgentDistribution:
         return pdf_val.item()
 
     def best_response_cdf(self, beta, s, sigma, r):
-        bounds = compute_score_bounds(beta)
+        bounds = compute_score_bounds(beta, sigma)
         if s < bounds[0]:
             return 0.0
         if s > bounds[1]:
@@ -354,7 +354,7 @@ class AgentDistribution:
         return cdf_val.item()
 
     def quantile_fixed_point_naive(self, beta, sigma, q, plot=False):
-        bounds = compute_score_bounds(beta)
+        bounds = compute_score_bounds(beta, sigma)
         thresholds = np.linspace(bounds[0], bounds[1], 500)
         quantile_br = [
             self.quantile_best_response(beta, s, sigma, q) for s in thresholds
@@ -389,7 +389,7 @@ class AgentDistribution:
         fixed_point -- fixed point of the quantile best response (float)
         
         """
-        bounds = compute_score_bounds(beta)
+        bounds = compute_score_bounds(beta, sigma)
         thresholds = np.linspace(bounds[0], bounds[1], 50)
         quantile_br = [
             self.quantile_best_response(beta, s, sigma, q) for s in thresholds
@@ -431,7 +431,7 @@ class AgentDistribution:
         fixed_point -- fixed point of the quantile best response (float)
         
         """
-        bounds = compute_score_bounds(beta)
+        bounds = compute_score_bounds(beta, sigma)
         thresholds = np.linspace(bounds[0], bounds[1], 50)
 
         all_s = [s0]

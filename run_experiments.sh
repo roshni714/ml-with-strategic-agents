@@ -3,7 +3,14 @@ seeds=(0 1 2 3 4 5 6 7 8 9)
 MAX_ITER=1
 for SEED in "${seeds[@]}";
 do
-    python train.py main --n 1000000 --perturbation_s 0.2 --perturbation_theta 0.025 --learning_rate 0.25 --max_iter $MAX_ITER --n_types 10 --save challenge_none_n_types_10_n_1000000 --seed $SEED --gradient_type "total_deriv"
+    python train_beta.py main --n 1000000 --d 2 --perturbation_s 0.2 --perturbation_beta 0.025 --learning_rate 1. --max_iter $MAX_ITER --n_types 10 --save dim_2_total --seed $SEED --gradient_type "total_deriv"
+#    python train.py main --n 1000000 --perturbation_s 0.2 --perturbation_theta 0.025 --learning_rate 1. --max_iter $MAX_ITER --n_types 20 --save challenge_n_types_20_n_1000000 --seed $SEED
+#    python train.py main --n 1000000 --perturbation_s 0.2 --perturbation_theta 0.025 --learning_rate 1. --max_iter $MAX_ITER --n_types 50 --save challenge_n_types_50_n_1000000 --seed $SEED
+done
+
+for SEED in "${seeds[@]}";
+do
+    python train_beta.py main --n 1000000 --d 5 --perturbation_s 0.2 --perturbation_beta 0.025 --learning_rate 1. --max_iter $MAX_ITER --n_types 2 --save dim_5_total --seed $SEED --gradient_type "total_deriv"
 #    python train.py main --n 1000000 --perturbation_s 0.2 --perturbation_theta 0.025 --learning_rate 1. --max_iter $MAX_ITER --n_types 20 --save challenge_n_types_20_n_1000000 --seed $SEED
 #    python train.py main --n 1000000 --perturbation_s 0.2 --perturbation_theta 0.025 --learning_rate 1. --max_iter $MAX_ITER --n_types 50 --save challenge_n_types_50_n_1000000 --seed $SEED
 done
