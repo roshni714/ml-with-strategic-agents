@@ -38,14 +38,12 @@ def empirical_policy_loss(agent_dist, beta, s, sigma, q, true_beta=None):
 
     br_dist = agent_dist.best_response_score_distribution(beta, s, sigma)
     n_br = br_dist[agent_dist.n_agent_types].reshape(agent_dist.n, 1)
-    curr_bounds = compute_score_bounds(beta)
 
     noisy_scores = norm.rvs(loc=0.0, scale=sigma, size=agent_dist.n).reshape(
         agent_dist.n, 1
     )
     noisy_scores += n_br
     x = np.quantile(noisy_scores, q).item()
-    print(x)
     loss = -np.mean(true_scores * (noisy_scores >= x))
     return loss
 
@@ -72,7 +70,7 @@ def optimal_beta_empirical_policy_loss(
     dim = agent_dist.d
     assert dim == 2, "Method does not work for dimension {}".format(dim)
 
-    thetas = np.linspace(-np.pi, np.pi, 50)
+    thetas = np.linspace(0.0, 2 * np.pi, 50)
     losses = []
     for theta in thetas:
         beta = np.array([np.cos(theta), np.sin(theta)]).reshape(2, 1)
@@ -98,14 +96,14 @@ def optimal_beta_empirical_policy_loss(
     return min_loss, opt_beta, opt_s_beta, thetas, losses
 
 
-def expected_policy_loss(agent_dist, theta, sigma, f, true_beta=None):
+def expected_policy_loss(agent_dist, beta, s, sigma, true_beta=None):
     """Method that computes the expected policy loss of deploying a particular model.
     
     Keyword args:
     agent_dist -- AgentDistribution
     beta -- model parameters
+    s -- threshold
     sigma -- standard deviation of noise distribution
-    f -- function that maps arctan(beta[1]/beta[0]) -> s_beta (fixed point)
     true_beta -- optional ideal model
     
     
@@ -113,15 +111,12 @@ def expected_policy_loss(agent_dist, theta, sigma, f, true_beta=None):
     loss -- expected policy loss at beta
     """
     dim = agent_dist.d
-    assert dim == 2, "Method does not work for dimension {}".format(dim)
 
-    beta = np.array([np.cos(theta), np.sin(theta)]).reshape(2, 1)
     if true_beta is None:
         true_beta = np.zeros(beta.shape)
         true_beta[0] = 1.0
 
     #    bounds = compute_score_bounds(beta)
-    s = f(theta)
     true_scores = np.array(
         [np.matmul(true_beta.T, agent.eta).item() for agent in agent_dist.agents]
     ).reshape(agent_dist.n_types, 1)
@@ -148,10 +143,13 @@ def optimal_beta_expected_policy_loss(
     dim = agent_dist.d
     assert dim == 2, "Method does not work for dimension {}".format(dim)
 
-    thetas = np.linspace(-np.pi, np.pi, 50)
+    thetas = np.linspace(0.0, 2 * np.pi, 50)
     losses = []
     for theta in thetas:
-        loss = expected_policy_loss(agent_dist, theta, sigma, f, true_beta)
+        s_eq = f(theta)
+        loss = expected_policy_loss(
+            agent_dist, convert_to_unit_vector(theta), s_eq, sigma, true_beta
+        )
         losses.append(loss)
 
     idx = np.argmin(losses)

@@ -4,6 +4,19 @@ from scipy.interpolate import interp1d
 import matplotlib.pyplot as plt
 
 
+def keep_theta_in_bounds(theta):
+
+    if theta[-1] > 2 * np.pi:
+        theta[-1] -= 2 * np.pi
+    elif theta[-1] < 0:
+        theta[-1] += 2 * np.pi
+
+    for i in range(theta.shape[0] - 1):
+        theta[i] = np.clip(theta[i], 0.0, np.pi)
+
+    return theta
+
+
 def convert_to_polar_coordinates(beta):
     """Method that converts a D-dimensional unit vector to polar coordinates (D-1 - dimensional.)
 
@@ -13,9 +26,35 @@ def convert_to_polar_coordinates(beta):
     Returns:
     theta -- (D-1, 1) vector of angles
     """
-    assert beta.shape[0] == 2, "Method only works for 2 dimensions now"
+    #    np.testing.assert_almost_equal(np.sqrt(np.sum(beta ** 2)).item(), 1.)
+    d = beta.shape[0]
+    theta = np.zeros(shape=(d - 1, 1))
+    for i in range(d - 1):
 
-    theta = np.arctan2(beta[1], beta[0])
+        if beta[i] != 0.0 and np.all(beta[i + 1 :] == 0):
+            if beta[i] > 0:
+                theta[i] = 0
+            else:
+                theta[i] = np.pi
+        elif np.all(beta[i:] == 0):
+            theta[i] = 0
+        else:
+            if i < d - 2:
+                rem_beta = beta[i:]
+                norm = np.sqrt(np.sum(rem_beta ** 2))
+                psi = np.arccos(beta[i] / norm)
+                theta[i] = psi
+
+            if i == d - 2:
+                rem_beta = beta[i:]
+                norm = np.sqrt(np.sum(rem_beta ** 2))
+                psi = np.arccos(beta[i] / norm)
+                if beta[-1] >= 0:
+                    angle = psi
+                else:
+                    angle = 2 * np.pi - psi
+                theta[i] = angle
+
     return theta
 
 
@@ -28,9 +67,30 @@ def convert_to_unit_vector(theta):
     Returns:
     beta -- (D, 1)  unit vector
     """
-    assert isinstance(theta, float), "Method only works for float theta now"
+    assert (
+        theta[-1] >= 0 and theta[-1] <= 2 * np.pi
+    ), "last theta coordinate must be between 0 and 2*pi"
+    assert np.all(theta[:-1] >= 0), "first through n-1 theta coordinates must be > 0"
+    assert np.all(
+        theta[:-1] < np.pi
+    ), "first through n-1 theta coordinates must be < pi"
 
-    beta = np.array([np.cos(theta), np.sin(theta)]).reshape(2, 1)
+    d_minus_one = theta.shape[0]
+
+    beta = []
+    d = d_minus_one + 1
+    beta = np.zeros(shape=(d, 1))
+    for i in range(d):
+        if i == 0:
+            beta[i] = np.cos(theta[i])
+        if i >= 1 and i <= d - 3 and 1 <= d - 3:
+            beta[i] = np.cos(theta[i]) * np.prod(np.sin(theta[: i - 1]))
+        if i == d - 2:
+            beta[i] = np.cos(theta[-1]) * np.prod(np.sin(theta[:-1]))
+        if i == d - 1:
+            beta[i] = np.sin(theta[-1]) * np.prod(np.sin(theta[:-1]))
+
+    beta = np.array(beta).reshape(d, 1)
     return beta
 
 
@@ -58,25 +118,27 @@ def compute_contraction_noise(agent_dist):
     return np.sqrt(1 / (min_eigenvalue * (np.sqrt(2 * np.pi * np.e)))) + 0.001
 
 
-def compute_score_bounds(beta):
+def compute_score_bounds(beta, sigma):
     """Method that returns bounds on the highest and lowest possible scores that an agent can achieve.
     Assumes that agents take actions in [0, 1]^2
 
     Keyword arguments:
     beta -- modelparameters
     """
-    assert beta.shape[0] == 2, "Method does not work for beta with dim {}".format(
-        beta.shape[0]
-    )
-    x_box = [
-        np.array([0.0, 10.0]),
-        np.array([10.0, 0.0]),
-        np.array([10.0, 10.0]),
-        np.array([0.0, 0.0]),
-    ]
+    #    assert beta.shape[0] == 2, "Method does not work for beta with dim {}".format(
+    #        beta.shape[0]
+    #    )
+    max_score = 0.0
+    min_score = 0.0
+    for i in range(len(beta)):
+        if beta[i] > 0:
+            max_score += beta[i] * 10
+        if beta[i] < 0:
+            min_score += beta[i] * 10
 
-    scores = [np.matmul(beta.T, x.reshape(2, 1)).item() for x in x_box]
-    return min(scores), max(scores)
+    min_score -= 4 * sigma
+    max_score += 4 * sigma
+    return min_score, max_score
 
 
 def smooth_indicator(x):
@@ -114,16 +176,19 @@ def fixed_point_interpolation_true_distribution(
     dim = agent_dist.d
     assert dim == 2, "Method does not work for dimension {}".format(dim)
 
-    thetas = np.linspace(-np.pi, np.pi, 100)
+    thetas = np.linspace(0.0, 2 * np.pi, 100)
     fixed_points = []
 
     # compute beta and fixed point for each theta
     for theta in tqdm.tqdm(thetas):
-        beta = np.array([np.cos(theta), np.sin(theta)]).reshape(dim, 1)
+        beta = convert_to_unit_vector(np.array([theta]).reshape(1, 1))
         fp = agent_dist.quantile_fixed_point_true_distribution(
             beta, sigma, q, plot=False
         )
         fixed_points.append(fp)
+
+    print(fixed_points)
+    print(thetas)
 
     f = interp1d(thetas, fixed_points, kind="linear")
 
