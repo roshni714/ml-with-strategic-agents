@@ -7,13 +7,13 @@ def report_results(results, thetas, losses, save):
     results_file = "results/" + save + ".csv"
     write_result(results_file, results)
 
-    train_file = "results/" + save + "_seed_{}".format(results["seed"]) + "_train.csv"
+    train_file = "results/" + save + "_seed_{}".format(results["seed"])  + "_gradient_type_{}".format(results["gradient_type"]) + "_train.csv"
 
     for i in range(len(thetas)):
         iteration_dic = {}
         iteration_dic["iteration"] = i
         iteration_dic["loss"] = losses[i]
-        iteration_dic["theta"] = thetas[i]
+        iteration_dic["params"] = list(thetas[i].flatten())
         write_result(train_file, iteration_dic)
 
 
