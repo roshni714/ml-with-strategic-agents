@@ -19,20 +19,12 @@ class GradientEstimator:
         self.agent_dist = agent_dist
         self.sigma = sigma
 
-#        self.perturbations_s = (
-#            2 * bernoulli.rvs(p=0.5, size=agent_dist.n).reshape(agent_dist.n, 1) - 1
-#        )
-#        self.perturbations_beta = (
-#            2
-#            * bernoulli.rvs(p=0.5, size=agent_dist.n * beta.shape[0]).reshape(
-#                agent_dist.n, beta.shape[0]
-#            )
-#            - 1
-#        )
-
-        self.perturbations_s_idx = np.random.choice(list(range(0, 2**1)), size=agent_dist.n)
-        self.perturbations_beta_idx = np.random.choice(list(range(0, 2**agent_dist.d)), size=agent_dist.n)
-
+        self.perturbations_s_idx = np.random.choice(
+            list(range(0, 2 ** 1)), size=agent_dist.n
+        )
+        self.perturbations_beta_idx = np.random.choice(
+            list(range(0, 2 ** agent_dist.d)), size=agent_dist.n
+        )
 
         self.noise = norm.rvs(loc=0.0, scale=sigma, size=agent_dist.n).reshape(
             agent_dist.n, 1
@@ -53,9 +45,12 @@ class GradientEstimator:
         )
         self.p_ss = np.array(list(itertools.product([-1.0, 1.0], repeat=1)))
 
-        self.perturbations_s = self.p_ss[self.perturbations_s_idx].reshape(agent_dist.n, 1)
-        self.perturbations_beta = self.p_betas[self.perturbations_beta_idx].reshape(agent_dist.n, agent_dist.d)
-
+        self.perturbations_s = self.p_ss[self.perturbations_s_idx].reshape(
+            agent_dist.n, 1
+        )
+        self.perturbations_beta = self.p_betas[self.perturbations_beta_idx].reshape(
+            agent_dist.n, agent_dist.d
+        )
 
     def get_best_responses(self):
         best_responses = {i: {} for i in range(self.agent_dist.n_types)}
@@ -63,19 +58,22 @@ class GradientEstimator:
             for i in range(len(self.p_betas)):
                 for j in range(len(self.p_ss)):
                     beta_perturbed = self.beta + (
-                        self.p_betas[i].reshape(self.beta.shape) * self.perturbation_beta_size
+                        self.p_betas[i].reshape(self.beta.shape)
+                        * self.perturbation_beta_size
                     )
-                    s_perturbed = self.s + (self.p_ss[j] * self.perturbation_s_size).item()
-                    if len(best_responses[agent_type]) == 0: 
+                    s_perturbed = (
+                        self.s + (self.p_ss[j] * self.perturbation_s_size).item()
+                    )
+                    if len(best_responses[agent_type]) == 0:
                         br = self.agent_dist.agents[agent_type].best_response(
                             beta_perturbed, s_perturbed, self.sigma
                         )
                     else:
                         br_prev = best_responses[agent_type][(0, 0)]
                         br = self.agent_dist.agents[agent_type].best_response(
-                            beta_perturbed, s_perturbed, self.sigma, x0 = br_prev
+                            beta_perturbed, s_perturbed, self.sigma, x0=br_prev
                         )
-                    best_responses[agent_type][(i, j)] =  br
+                    best_responses[agent_type][(i, j)] = br
 
         return best_responses
 
@@ -88,14 +86,12 @@ class GradientEstimator:
         for agent_type in range(self.agent_dist.n_types):
             for p_beta in p_betas:
                 beta_perturbed = self.beta + (
-                        p_beta.reshape(self.beta.shape) * self.perturbation_beta_size
-                    )
+                    p_beta.reshape(self.beta.shape) * self.perturbation_beta_size
+                )
                 br = self.agent_dist.agents[agent_type].best_response(
-                        beta_perturbed, self.s, self.sigma
-                    )
-                best_responses[agent_type].append(
-                        {"p_beta": p_beta, "br": br}
-                    )
+                    beta_perturbed, self.s, self.sigma
+                )
+                best_responses[agent_type].append({"p_beta": p_beta, "br": br})
 
         return best_responses
 
@@ -111,13 +107,12 @@ class GradientEstimator:
             p_s = self.p_ss[j]
             br = best_responses[agent_type][(i, j)]
             beta_perturbed = self.beta + (
-                        np.array(p_beta).reshape(self.beta.shape)
-                        * self.perturbation_beta_size
-                    )
+                np.array(p_beta).reshape(self.beta.shape) * self.perturbation_beta_size
+            )
             scores.append(
-                        np.matmul(beta_perturbed.T, br).item()
-                        - (p_s.item() * self.perturbation_s_size)
-                    )
+                np.matmul(beta_perturbed.T, br).item()
+                - (p_s.item() * self.perturbation_s_size)
+            )
             beta_perturbed_scores.append(np.matmul(beta_perturbed.T, br).item())
             unperturbed_scores.append(np.matmul(self.beta.T, br).item())
         scores = np.array(scores).reshape(self.agent_dist.n, 1)
@@ -153,7 +148,6 @@ class GradientEstimator:
             self.agent_dist.n, 1
         )
         return beta_perturbed_scores
-
 
     def compute_gradients_partial(self, beta_perturbed_scores, cutoff):
         p_beta = self.perturbations_beta * self.perturbation_beta_size
@@ -236,11 +230,13 @@ class GradientEstimator:
         beta_perturbed_scores = self.get_scores_partial(br)
         cutoff = np.quantile(beta_perturbed_scores, self.q).item()
 
-        gamma_loss_beta, loss_vector = self.compute_gradients_partial(beta_perturbed_scores, cutoff)
+        gamma_loss_beta, loss_vector = self.compute_gradients_partial(
+            beta_perturbed_scores, cutoff
+        )
 
-        dic = {"partial_deriv_loss_beta": gamma_loss_beta,
-                "loss": loss_vector.mean().item()}
+        dic = {
+            "partial_deriv_loss_beta": gamma_loss_beta,
+            "loss": loss_vector.mean().item(),
+        }
 
         return dic
-
-
