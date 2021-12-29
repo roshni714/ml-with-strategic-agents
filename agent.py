@@ -18,7 +18,7 @@ class Agent:
         self.eta = eta
         self.gamma = gamma
 
-    def best_response(self, beta, s, sigma):
+    def best_response(self, beta, s, sigma, x0=None):
         """Method for computing an agent's best response given a particular model and threshold under a noise assumption.
         Keyword arguments:
         beta -- model parameters (D, 1) array
@@ -32,12 +32,17 @@ class Agent:
         #            s >= bounds[0] and s <= bounds[1]
         #        ), "cannot compute best response for s out of score bounds"
         try:
-            val = newton(
+            if x0 is None:
+                x0 = self.eta.flatten()
+            else:
+                x0 = x0.flatten()
+            res = newton(
                 Agent._func_derivative_utility(beta, s, self.eta, self.gamma, sigma),
-                x0=self.eta.flatten(),
+                x0=x0,
                 maxiter=20000,
-                tol=1.48e-09,
+                full_output=True
             )
+            val = res.root
         except:
             val = self.eta
             print(
