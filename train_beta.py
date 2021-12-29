@@ -35,7 +35,7 @@ def learn_model(
     beta = np.zeros((agent_dist.d, 1))
     for i in range(max_iter):
         s_eq = agent_dist.quantile_fixed_point_true_distribution(beta, sigma, q)
-        betas.append(list(beta.copy()))
+        betas.append(beta.copy())
         s_eqs.append(s_eq)
         grad_est = GradientEstimator(
             agent_dist,
@@ -74,7 +74,7 @@ def learn_model(
 
 def create_generic_agent_dist(n, n_types, d):
     etas = np.random.uniform(3.0, 8.0, n_types * d).reshape(n_types, d, 1)
-    gammas = np.random.uniform(0.05, 2.0, n_types * d).reshape(n_types, d, 1)
+    gammas = np.random.uniform(0.05, 5.0, n_types * d).reshape(n_types, d, 1)
     dic = {"etas": etas, "gammas": gammas}
     agent_dist = AgentDistribution(n=n, d=d, n_types=n_types, types=dic, prop=None)
     return agent_dist
@@ -128,7 +128,8 @@ def main(
 ):
     np.random.seed(seed)
 
-    agent_dist = create_challenging_agent_dist(n, n_types, d)
+#    agent_dist = create_challenging_agent_dist(n, n_types, d)
+    agent_dist = create_generic_agent_dist(n, n_types, d)
     sigma = compute_continuity_noise(agent_dist) + 0.05
     q = 0.7
     betas, s_eqs, emp_losses = learn_model(
@@ -155,7 +156,7 @@ def main(
         "final_loss": expected_policy_loss(
             agent_dist, np.array(betas[-1]).reshape(d, 1), s_eqs[-1], sigma
         ),
-        "final_beta": betas[-1],
+        "final_beta": list(betas[-1].flatten()),
         "gradient_type": gradient_type,
     }
     assert len(betas) == len(emp_losses)
