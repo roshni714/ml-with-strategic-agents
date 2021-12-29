@@ -92,7 +92,7 @@ class GradientEstimator:
                     else:
                         br_prev = best_responses[agent_type][0]
                         br = self.agent_dist.agents[agent_type].best_response(
-                            beta_perturbed, s_perturbed, self.sigma, x0=br_prev
+                            beta_perturbed, self.s, self.sigma, x0=br_prev
                         )
                     best_responses[agent_type][i] = br
 
