@@ -40,7 +40,7 @@ class Agent:
                 Agent._func_derivative_utility(beta, s, self.eta, self.gamma, sigma),
                 x0=x0,
                 maxiter=20000,
-                full_output=True
+                full_output=True,
             )
             val = res.root
         except:
