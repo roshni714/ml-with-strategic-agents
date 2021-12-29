@@ -199,11 +199,8 @@ class GradientEstimator:
         return kde(cutoff).reshape(1, 1)
 
     def compute_total_derivative(self):
-        print("Get BR")
         br = self.get_best_responses()
-        print("Get scores")
         scores, unperturbed_scores, beta_perturbed_scores = self.get_scores(br)
-        print("Compute grad")
         cutoff = np.quantile(scores, self.q).item()
 
         (
