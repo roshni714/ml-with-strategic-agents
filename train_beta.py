@@ -84,12 +84,12 @@ def create_challenging_agent_dist(n, n_types, d):
     gaming_type_etas = np.random.uniform(3.0, 5.0, int(n_types * d / 2)).reshape(
         int(n_types / 2), d, 1
     )
-    gaming_type_gamma_one = np.random.uniform(0.01, 0.02, int(n_types / 2)).reshape(
-        int(n_types / 2), 1, 1
+    gaming_type_gamma_one = np.random.uniform(0.01, 0.02, int(n_types / 2) * int(d/2) ).reshape(
+        int(n_types / 2), int(d/2), 1
     )
     gaming_type_gamma_two = np.random.uniform(
-        10.0, 20.0, int(n_types * (d - 1) / 2)
-    ).reshape(int(n_types / 2), d - 1, 1)
+        10.0, 20.0, int(n_types * (d - int(d/2)) / 2)
+    ).reshape(int(n_types / 2), d - int(d/2), 1)
     gaming_type_gammas = np.hstack((gaming_type_gamma_one, gaming_type_gamma_two))
     natural_type_etas = np.random.uniform(5.0, 7.0, int(n_types * d / 2)).reshape(
         int(n_types / 2), d, 1
