@@ -47,19 +47,23 @@ def learn_model(
             perturbation_s_size=perturbation_s,
             perturbation_beta_size=perturbation_beta,
         )
-        dic = grad_est.compute_total_derivative()
-        loss = dic["loss"]
         if gradient_type == "total_deriv":
+            dic = grad_est.compute_total_derivative()
             grad_beta = dic["total_deriv"]
+            loss = dic["loss"]
         elif gradient_type == "partial_deriv_loss_beta":
+            dic = grad_est.compute_partial_derivative()
             grad_beta = dic["partial_deriv_loss_beta"]
+            loss = dic["loss"]
+        else:
+            assert False, "gradient type not valid"
 
         emp_losses.append(loss)
 
         print(
             "Loss: {}".format(loss),
             "Beta:{}".format(beta),
-            "Gradient: {}".format(grad_beta),
+            "Gradient: {}".format(grad_beta * learning_rate),
         )
         beta -= grad_beta * learning_rate
         beta_norm = max(1.0, np.sqrt(np.sum(beta ** 2)))
