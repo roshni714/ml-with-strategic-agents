@@ -78,22 +78,26 @@ class GradientEstimator:
         return best_responses
 
     def get_best_responses_partial(self):
-        best_responses = {i: [] for i in range(self.agent_dist.n_types)}
-        p_betas = np.array(
-            list(itertools.product([-1.0, 1.0], repeat=self.beta.shape[0]))
-        )
-
+        best_responses = {i: {} for i in range(self.agent_dist.n_types)}
         for agent_type in range(self.agent_dist.n_types):
-            for p_beta in p_betas:
-                beta_perturbed = self.beta + (
-                    p_beta.reshape(self.beta.shape) * self.perturbation_beta_size
-                )
-                br = self.agent_dist.agents[agent_type].best_response(
-                    beta_perturbed, self.s, self.sigma
-                )
-                best_responses[agent_type].append({"p_beta": p_beta, "br": br})
+            for i in range(len(self.p_betas)):
+                    beta_perturbed = self.beta + (
+                        self.p_betas[i].reshape(self.beta.shape)
+                        * self.perturbation_beta_size
+                    )
+                    if len(best_responses[agent_type]) == 0:
+                        br = self.agent_dist.agents[agent_type].best_response(
+                            beta_perturbed, self.s, self.sigma
+                        )
+                    else:
+                        br_prev = best_responses[agent_type][0]
+                        br = self.agent_dist.agents[agent_type].best_response(
+                            beta_perturbed, s_perturbed, self.sigma, x0=br_prev
+                        )
+                    best_responses[agent_type][i] = br
 
         return best_responses
+
 
     def get_scores(self, best_responses):
         unperturbed_scores = []
@@ -127,27 +131,22 @@ class GradientEstimator:
         return scores, unperturbed_scores, beta_perturbed_scores
 
     def get_scores_partial(self, best_responses):
-        unperturbed_scores = []
         beta_perturbed_scores = []
-        scores = []
-        for i in range(self.agent_dist.n):
-            agent_type = self.agent_dist.n_agent_types[i]
-            p_beta = self.perturbations_beta[i]
-            br_dics = best_responses[agent_type]
-            for dic in br_dics:
-                if np.all(dic["p_beta"] == p_beta):
-                    beta_perturbed = self.beta + (
-                        np.array(p_beta).reshape(self.beta.shape)
-                        * self.perturbation_beta_size
-                    )
-                    br = dic["br"]
-                    beta_perturbed_scores.append(np.matmul(beta_perturbed.T, br).item())
-                    unperturbed_scores.append(np.matmul(self.beta.T, br).item())
-                    continue
+        for k in range(self.agent_dist.n):
+            agent_type = self.agent_dist.n_agent_types[k]
+            i = self.perturbations_beta_idx[k]
+            p_beta = self.p_betas[i]
+            br = best_responses[agent_type][i]
+            beta_perturbed = self.beta + (
+                np.array(p_beta).reshape(self.beta.shape) * self.perturbation_beta_size
+            )
+            beta_perturbed_scores.append(np.matmul(beta_perturbed.T, br).item())
+        #        unperturbed_scores = np.array(unperturbed_scores).reshape(self.agent_dist.n, 1)
         beta_perturbed_scores = self.noise + np.array(beta_perturbed_scores).reshape(
             self.agent_dist.n, 1
         )
         return beta_perturbed_scores
+
 
     def compute_gradients_partial(self, beta_perturbed_scores, cutoff):
         p_beta = self.perturbations_beta * self.perturbation_beta_size
