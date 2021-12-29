@@ -81,23 +81,22 @@ class GradientEstimator:
         best_responses = {i: {} for i in range(self.agent_dist.n_types)}
         for agent_type in range(self.agent_dist.n_types):
             for i in range(len(self.p_betas)):
-                    beta_perturbed = self.beta + (
-                        self.p_betas[i].reshape(self.beta.shape)
-                        * self.perturbation_beta_size
+                beta_perturbed = self.beta + (
+                    self.p_betas[i].reshape(self.beta.shape)
+                    * self.perturbation_beta_size
+                )
+                if len(best_responses[agent_type]) == 0:
+                    br = self.agent_dist.agents[agent_type].best_response(
+                        beta_perturbed, self.s, self.sigma
                     )
-                    if len(best_responses[agent_type]) == 0:
-                        br = self.agent_dist.agents[agent_type].best_response(
-                            beta_perturbed, self.s, self.sigma
-                        )
-                    else:
-                        br_prev = best_responses[agent_type][0]
-                        br = self.agent_dist.agents[agent_type].best_response(
-                            beta_perturbed, self.s, self.sigma, x0=br_prev
-                        )
-                    best_responses[agent_type][i] = br
+                else:
+                    br_prev = best_responses[agent_type][0]
+                    br = self.agent_dist.agents[agent_type].best_response(
+                        beta_perturbed, self.s, self.sigma, x0=br_prev
+                    )
+                best_responses[agent_type][i] = br
 
         return best_responses
-
 
     def get_scores(self, best_responses):
         unperturbed_scores = []
@@ -146,7 +145,6 @@ class GradientEstimator:
             self.agent_dist.n, 1
         )
         return beta_perturbed_scores
-
 
     def compute_gradients_partial(self, beta_perturbed_scores, cutoff):
         p_beta = self.perturbations_beta * self.perturbation_beta_size
