@@ -149,7 +149,11 @@ def optimal_beta_expected_policy_loss(
     for theta in thetas:
         s_eq = f(theta)
         loss = expected_policy_loss(
-            agent_dist, convert_to_unit_vector(np.array([theta]).reshape(1, 1)), s_eq, sigma, true_beta
+            agent_dist,
+            convert_to_unit_vector(np.array([theta]).reshape(1, 1)),
+            s_eq,
+            sigma,
+            true_beta,
         )
         losses.append(loss)
 
