@@ -128,7 +128,7 @@ def main(
 ):
     np.random.seed(seed)
 
-#    agent_dist = create_challenging_agent_dist(n, n_types, d)
+    #    agent_dist = create_challenging_agent_dist(n, n_types, d)
     agent_dist = create_generic_agent_dist(n, n_types, d)
     sigma = compute_continuity_noise(agent_dist) + 0.05
     q = 0.7
