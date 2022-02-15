@@ -9,6 +9,7 @@ from utils import compute_score_bounds
 
 class Agent:
     """This is a class for representing a strategic agent.
+
     Keyword arguments:
     eta -- natural ability of agent (D, 1) array
     gamma -- gaming ability of agent (D, 1) array
@@ -20,10 +21,15 @@ class Agent:
 
     def best_response(self, beta, s, sigma, x0=None):
         """Method for computing an agent's best response given a particular model and threshold under a noise assumption.
+
         Keyword arguments:
         beta -- model parameters (D, 1) array
         s -- threshold (float)
         sigma -- standard deviation of the noise distribution (float)
+        x0 -- initial guess of best response (D, 1) array
+
+        Returns:
+        br -- agent best response (D,1) array
         """
         bounds = compute_score_bounds(beta, sigma)
         if s < bounds[0] and s > bounds[1]:
@@ -39,21 +45,31 @@ class Agent:
             res = newton(
                 Agent._func_derivative_utility(beta, s, self.eta, self.gamma, sigma),
                 x0=x0,
-                maxiter=20000,
+                maxiter=10000,
                 full_output=True,
             )
-            val = res.root
+            if all(res.converged):
+                val = res.root
+            else:
+                val = np.array([0.0, 0.0]).reshape(2, 1)
         except:
-            val = self.eta
+            val = np.array([0.0, 0.0]).reshape(2, 1)
             print(
                 "Failed to compute best response for agent with eta={}, gamma={} under beta={}, s={}, sigma={}.".format(
                     self.eta, self.gamma, beta, s, sigma
                 )
             )
         # val = np.clip(val, a_min=0.0, a_max=1.0)
-        return val.reshape(beta.shape)
+        br = val.reshape(beta.shape)
+        return br
 
     def plot_best_response_score(self, beta, sigma):
+        """Method for plotting agent's best response score (without noise) vs. perceived threshold s.
+
+        Keyword arguments:
+        beta -- model parameters (D, 1) array
+        sigma -- standard deviation of noise distribution (float)
+        """
         bounds = compute_score_bounds(beta, sigma)
         thresholds = np.linspace(bounds[0], bounds[1], 50)
         br = [
@@ -73,6 +89,16 @@ class Agent:
         Note that scipy's implementation of Newton's Method expects arrays of shape (D,) so the function below
         takes input of shape (D,). The input is reshaped to a (D,1) vector in the method and the output is again
         reshaped to be of shape (D,)
+
+        Keyword arguments:
+        beta -- model parameters (D, 1) array
+        s -- perceived threshold (float)
+        eta -- agent's raw features (D, 1) array
+        gamma -- agent's gaming ability (D, 1) array
+        sigma -- standard deviation of noise distribution (float)
+
+        Returns:
+        f -- function that computes the derivative of agent's utility (Python function that takes (D,) array as input and outputs (1,) array)
         """
 
         def f(x):
@@ -86,6 +112,16 @@ class Agent:
         return f
 
     def br_score_function_s(self, beta, sigma):
+        """Method that returns an interpolator of the agent's best response score (without noise) as a function of perceived threshold s.
+
+        Keyword arguments:
+        beta -- model parameters (D, 1) array
+        sigma -- standard deviation of noise distribution (float)
+
+        Returns:
+        f -- interpolator function (Python function that takes (1,) array as input and outputs (1,) array)
+        """
+
         bounds = compute_score_bounds(beta, sigma)
         thresholds = np.linspace(bounds[0], bounds[1], 50)
         br = [
@@ -97,6 +133,16 @@ class Agent:
         return f
 
     def br_score_function_beta(self, s, sigma):
+        """Method that returns an interpolator of the agent's best response score (without noise) as a function of the model parameters
+        in polar coordinates. CAUTION: Assumes that the model is given by 1-dimensional polar coordinate theta.
+
+        Keyword arguments:
+        s -- perceived threshold (float)
+        sigma -- standard deviation of the noise distribution
+
+        Returns:
+        f -- interpolator function (Python function that takes (1,) array as input and outputs (1,) array)
+        """
         thetas = np.linspace(-np.pi, np.pi, 100)
         br = []
         valid_theta = []
@@ -109,19 +155,6 @@ class Agent:
 
         f = interp1d(valid_theta, br, kind="linear")
         return f, valid_theta
-
-    def br_gradient_beta(self, beta, s, sigma):
-        """
-        Computes of the Jacobian of the best response wrt to beta.
-        Keyword arguments:
-        beta -- model parameters (D, 1)
-        s -- threshold (float)
-        sigma -- standard deviation of the noise distribution (float)
-        Returns:
-        best_response -- (D, 1) array
-        jacobian -- (D, D) matrix
-        """
-        pass
 
     def br_gradient_s(self, beta, s, sigma):
         """
@@ -147,6 +180,16 @@ class Agent:
         return best_response, deriv_s
 
     def br_gradient_theta(self, theta, s, sigma):
+        """
+        Computes of the gradient of the best response wrt to theta.
+        Keyword arguments:
+        beta -- model parameters (D, 1)
+        s -- threshold (float)
+        sigma -- standard deviation of the noise distribution (float)
+        Returns:
+        best_response -- (D, 1) array
+        deriv_s -- (D, 1) array
+        """
 
         beta = np.array([np.cos(theta), np.sin(theta)]).reshape(2, 1)
         bounds = compute_score_bounds(beta, sigma)
