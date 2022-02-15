@@ -123,7 +123,12 @@ def compute_score_bounds(beta, sigma):
     Assumes that agents take actions in [0, 1]^2
 
     Keyword arguments:
-    beta -- modelparameters
+    beta -- model parameters (D,1) array
+    sigma -- standard deviation of noise distribution (float)
+
+    Returns:
+    min_score -- lower score bound
+    max_score -- uper score bound
     """
     #    assert beta.shape[0] == 2, "Method does not work for beta with dim {}".format(
     #        beta.shape[0]
@@ -140,10 +145,6 @@ def compute_score_bounds(beta, sigma):
     max_score += 4 * sigma
     return min_score, max_score
 
-
-def smooth_indicator(x):
-    v = 100.0
-    return 1 / (1.0 + np.exp(-v * (x + 1 / np.sqrt(v))))
 
 
 def spherical_coordinates(beta):
