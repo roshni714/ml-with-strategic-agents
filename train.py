@@ -67,6 +67,7 @@ def learn_model(
             "Gradient: {}".format(grad_theta),
         )
         theta -= grad_theta * learning_rate
+        agent_dist.resample()
 
     return thetas, s_eqs, emp_losses
 
