@@ -184,12 +184,10 @@ def fixed_point_interpolation_true_distribution(
     for theta in tqdm.tqdm(thetas):
         beta = convert_to_unit_vector(np.array([theta]).reshape(1, 1))
         fp = agent_dist.quantile_fixed_point_true_distribution(
-            beta, sigma, q, plot=False
+            beta, sigma, q
         )
         fixed_points.append(fp)
 
-    print(fixed_points)
-    print(thetas)
 
     f = interp1d(thetas, fixed_points, kind="linear")
 

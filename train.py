@@ -41,7 +41,7 @@ def learn_model(
         #        s_eq = f(theta.item())
         beta = convert_to_unit_vector(theta)
         s_eq = agent_dist.quantile_fixed_point_true_distribution(beta, sigma, q)
-        thetas.append(list(theta))
+        thetas.append(np.array(list(theta)).reshape(len(theta), 1))
         s_eqs.append(s_eq)
         grad_est = GradientEstimator(
             agent_dist,
@@ -164,7 +164,7 @@ def main(
             "opt_loss": min_loss,
             "opt_theta": opt_theta,
             "final_loss": expected_policy_loss(
-                agent_dist, thetas[-1], s_eqs[-1], sigma
+                agent_dist, convert_to_unit_vector(thetas[-1]), s_eqs[-1], sigma
             ),
             "final_theta": thetas[-1],
             "gradient_type": gradient_type,

@@ -32,7 +32,9 @@ def learn_model(
     betas = []
     s_eqs = []
     emp_losses = []
-    beta = np.zeros((agent_dist.d, 1))
+    beta = np.ones((agent_dist.d, 1))
+    beta_norm = np.sqrt(np.sum(beta ** 2))
+    beta /= beta_norm
     for i in range(max_iter):
         s_eq = agent_dist.quantile_fixed_point_true_distribution(beta, sigma, q)
         betas.append(beta.copy())
@@ -66,7 +68,7 @@ def learn_model(
             "Gradient: {}".format(grad_beta * learning_rate),
         )
         beta -= grad_beta * learning_rate
-        beta_norm = max(1.0, np.sqrt(np.sum(beta ** 2)))
+        beta_norm = np.sqrt(np.sum(beta ** 2))
         beta /= beta_norm
 
     return betas, s_eqs, emp_losses
